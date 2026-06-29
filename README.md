@@ -62,6 +62,7 @@ By the end of this workshop, you will be able to:
 | [Challenge 2](challenge-2/README.md) | Specialized Agents with Tools | 25 min | Build 5 focused agents with 15 infrastructure tools |
 | [Challenge 3](challenge-3/README.md) | Workflow Orchestration | 25 min | Wire agents into an automated pipeline with routing |
 | [Challenge 4](challenge-4/README.md) | Memory Patterns | 20 min | Add incident memory so the system learns over time |
+| [Challenge 5](challenge-5/README.md) | Advanced Patterns (Bonus) | 20+ min | Human-in-the-loop, structured output, observability |
 
 ---
 
@@ -78,13 +79,15 @@ maf-lab/
 │   └── challenge.ipynb
 ├── challenge-2/               # Specialized agents + tools
 │   ├── README.md
-│   └── challenge.ipynb
+│   └── challenge.ipynb        # 4 agents to build (1 reference provided)
 ├── challenge-3/               # Workflow orchestration
 │   ├── README.md
-│   └── challenge.ipynb
+│   └── challenge.ipynb        # Build executors + routing logic
 ├── challenge-4/               # Memory patterns
 │   ├── README.md
-│   └── challenge.ipynb
+│   └── challenge.ipynb        # Implement memory store + search
+├── challenge-5/               # Bonus: advanced patterns
+│   └── README.md              # Human-in-the-loop, structured output, tracing
 ├── tools/
 │   └── mock_infra.py          # 15 simulated infrastructure tools
 ├── data/

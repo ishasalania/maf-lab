@@ -106,6 +106,16 @@ The runbook for "high_latency" has `auto_remediation_allowed: true`, so the agen
 
 ---
 
+## Learning Resources
+
+| Topic | Link |
+|-------|------|
+| MAF Tool Integration | [Agent Framework tools docs](https://github.com/microsoft/agent-framework) |
+| Prompt engineering for agents | [System message best practices](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/system-message) |
+| Function calling | [OpenAI function calling](https://platform.openai.com/docs/guides/function-calling) |
+
+---
+
 ## ➡️ Next Challenge
 
 You're manually passing outputs between agents. What if verification fails? What if you want this to run unattended? Head to **[Challenge 3: Workflow Orchestration](../challenge-3/README.md)** to automate the pipeline.

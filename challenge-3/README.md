@@ -117,6 +117,17 @@ When you run the notification-service incident, the diagnostics will show the em
 
 ---
 
+## Learning Resources
+
+| Topic | Link |
+|-------|------|
+| MAF WorkflowBuilder | [Agent Framework workflows](https://github.com/microsoft/agent-framework) |
+| Orchestration patterns | [Multi-agent orchestration](https://learn.microsoft.com/en-us/azure/ai-services/agents/concepts/multi-agent) |
+| State machines | [Finite-state machine (Wikipedia)](https://en.wikipedia.org/wiki/Finite-state_machine) |
+| Saga pattern | [Microservices saga pattern](https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/saga/saga) |
+
+---
+
 ## ➡️ Next Challenge
 
 The workflow handles incidents — but starts from scratch every time. A human SRE gets faster because they remember past incidents. Head to **[Challenge 4: Memory Patterns](../challenge-4/README.md)** to make your system learn.

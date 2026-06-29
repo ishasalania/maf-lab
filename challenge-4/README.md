@@ -152,10 +152,12 @@ Single Agent          →  Specialized Agents  →  Workflow          →  Memor
 | Topic | What to explore |
 |-------|-----------------|
 | **Human-in-the-loop** | Add approval gates before destructive actions |
-| **Checkpointing** | Persist workflow state for long-running incidents |
+| **Structured outputs** | Use Pydantic models for reliable agent responses |
 | **MCP integration** | Connect to real Prometheus/PagerDuty via MCP protocol |
 | **Observability** | Add OpenTelemetry tracing to monitor agent decisions |
 | **Evaluation** | Red-team test with adversarial incident scenarios |
+
+> **Still have time?** Head to **[Challenge 5: Advanced Patterns (Bonus)](../challenge-5/README.md)** for stretch goals!
 
 ### Resources
 

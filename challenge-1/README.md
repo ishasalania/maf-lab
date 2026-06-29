@@ -79,6 +79,16 @@ After running the notebook, consider:
 
 ---
 
+## Learning Resources
+
+| Topic | Link |
+|-------|------|
+| Microsoft Agent Framework | [github.com/microsoft/agent-framework](https://github.com/microsoft/agent-framework) |
+| Why multi-agent? | [Multi-agent design patterns](https://learn.microsoft.com/en-us/azure/ai-services/agents/concepts/multi-agent) |
+| Task decomposition | [Agentic AI design patterns](https://www.deeplearning.ai/the-batch/agentic-design-patterns-part-2-reflection/) |
+
+---
+
 ## ➡️ Next Challenge
 
 Ready to build something better? Head to **[Challenge 2: Specialized Agents with Tools](../challenge-2/README.md)** where you'll create 5 focused agents that can actually do things.
