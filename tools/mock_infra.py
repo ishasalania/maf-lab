@@ -1,556 +1,461 @@
-"""Mock Infrastructure Tools for the Multi-Agent On-Call Workshop.
+"""Mock Infrastructure Tools for MAF Workshop.
 
-These tools simulate real production infrastructure APIs.
-In a real system, these would call Prometheus, Kubernetes, PagerDuty, Slack, etc.
+These simulate production infrastructure APIs (Prometheus, K8s, PagerDuty, Slack).
+Uses MAF's @tool decorator with proper type annotations and approval_mode.
 
-Each tool is designed to be used by a specific agent in the multi-agent pipeline:
-- Triage Agent: check_alert_history, get_runbook
-- Diagnostics Agent: get_metrics, get_logs, check_dependencies
-- Remediation Agent: restart_pod, scale_service, flush_cache, toggle_feature_flag
-- Verification Agent: get_health_status, run_smoke_test
-- Communications Agent: post_to_slack, create_incident_ticket, update_status_page
+Tools requiring human approval before execution are marked with
+approval_mode="always_require" — this integrates with MAF's HITL workflow pattern.
 """
 
-import json
-import random
-from datetime import datetime, timedelta
 from typing import Annotated
 
-from pydantic import Field
-
+from agent_framework import tool
 
 # =============================================================================
-# TRIAGE TOOLS
+# TRIAGE TOOLS (safe, read-only)
 # =============================================================================
 
+
+@tool(approval_mode="never_require")
 def check_alert_history(
-    service_name: Annotated[str, Field(description="Name of the service that triggered the alert")],
-) -> str:
-    """Check if this service has had similar alerts in the past 7 days.
-    Returns historical alert data and any known resolutions."""
-    
-    history = {
+    service: Annotated[str, "The service name to check alert history for"],
+) -> dict:
+    """Check recent alert history for a service. Returns past incidents and patterns."""
+    histories = {
         "payment-api": {
-            "recent_alerts": 3,
-            "last_occurrence": "2 days ago",
-            "last_resolution": "Restarted pod-3 due to memory leak in payment processing batch job",
-            "recurring_pattern": True,
-            "known_issue": "JIRA-4521: Memory leak in PaymentBatchProcessor - fix scheduled for next sprint",
-        },
-        "user-service": {
-            "recent_alerts": 0,
-            "last_occurrence": "23 days ago",
-            "last_resolution": "Certificate rotation resolved TLS handshake failures",
-            "recurring_pattern": False,
-            "known_issue": None,
+            "total_alerts_7d": 5,
+            "recurring": True,
+            "pattern": "Memory spikes every 6h correlating with batch job",
+            "last_incident": "2024-11-13T14:22:00Z",
+            "last_resolution": "Pod restart resolved — memory leak in connection pool",
+            "mttr_minutes": 12,
         },
         "order-service": {
-            "recent_alerts": 1,
-            "last_occurrence": "5 days ago",
-            "last_resolution": "Traffic spike from marketing campaign - auto-scaled to 8 replicas",
-            "recurring_pattern": False,
-            "known_issue": None,
+            "total_alerts_7d": 1,
+            "recurring": False,
+            "pattern": "No recurring pattern detected",
+            "last_incident": "2024-11-10T08:15:00Z",
+            "last_resolution": "Upstream dependency timeout — resolved by scaling",
+            "mttr_minutes": 25,
         },
         "notification-service": {
-            "recent_alerts": 7,
-            "last_occurrence": "6 hours ago",
-            "last_resolution": "Upstream email provider rate limiting - toggled feature flag to use backup provider",
-            "recurring_pattern": True,
-            "known_issue": "JIRA-4590: Migrate to new email provider with higher rate limits",
+            "total_alerts_7d": 0,
+            "recurring": False,
+            "pattern": "No prior alerts",
+            "last_incident": None,
+            "last_resolution": None,
+            "mttr_minutes": None,
         },
     }
-    
-    data = history.get(service_name, {
-        "recent_alerts": 0,
-        "last_occurrence": "Never",
-        "last_resolution": "No previous incidents on record",
-        "recurring_pattern": False,
-        "known_issue": None,
-    })
-    
-    return json.dumps(data, indent=2)
+    return histories.get(service, {"total_alerts_7d": 0, "recurring": False, "pattern": "Unknown service"})
 
 
+@tool(approval_mode="never_require")
 def get_runbook(
-    incident_type: Annotated[str, Field(description="Type of incident: 'high_latency', 'error_spike', 'pod_crash', 'dependency_failure', 'certificate_expiry'")],
-) -> str:
-    """Retrieve the operational runbook for a given incident type.
-    Returns step-by-step remediation instructions."""
-    
+    incident_type: Annotated[str, "The type of incident (e.g. 'high_latency', 'error_rate', 'oom')"],
+) -> dict:
+    """Retrieve the operations runbook for this incident type."""
     runbooks = {
         "high_latency": {
-            "title": "High Latency Runbook",
-            "severity_threshold": "p95 > 2000ms for 5 minutes",
-            "steps": [
-                "1. Check pod resource utilization (CPU/memory)",
-                "2. Check dependency health (database, cache, upstream services)",
-                "3. If memory > 85%: restart affected pods",
-                "4. If CPU > 90%: scale horizontally (add 2 replicas)",
-                "5. If dependency slow: check connection pool exhaustion",
-                "6. Verify resolution with smoke tests",
-            ],
-            "escalation": "If not resolved in 15 minutes, page on-call SRE lead",
+            "playbook_id": "RB-204",
+            "title": "High Latency Response",
             "auto_remediation_allowed": True,
-        },
-        "error_spike": {
-            "title": "Error Rate Spike Runbook",
-            "severity_threshold": "5xx rate > 5% for 3 minutes",
             "steps": [
-                "1. Identify error patterns in logs",
-                "2. Check recent deployments (rollback if < 30 min old)",
-                "3. Check external dependency health",
-                "4. If single pod: restart that pod",
-                "5. If all pods: check shared dependency (DB, cache)",
-                "6. Toggle feature flags to disable problematic features",
+                "1. Check metrics for resource exhaustion (CPU/Memory/Connections)",
+                "2. Identify affected pods via logs",
+                "3. If OOM: restart affected pod",
+                "4. If connection pool: flush cache and restart",
+                "5. Verify health check passes within 60s",
             ],
-            "escalation": "If not resolved in 10 minutes, page engineering lead",
+            "escalation_threshold_minutes": 15,
+        },
+        "error_rate": {
+            "playbook_id": "RB-301",
+            "title": "Error Rate Spike Response",
             "auto_remediation_allowed": True,
-        },
-        "pod_crash": {
-            "title": "Pod CrashLoopBackOff Runbook",
-            "severity_threshold": "Pod restart count > 3 in 10 minutes",
             "steps": [
-                "1. Check pod logs for crash reason (OOM, panic, config error)",
-                "2. If OOMKilled: increase memory limit and restart",
-                "3. If config error: check recent ConfigMap changes",
-                "4. If panic: collect core dump, restart with previous image",
-                "5. Scale up healthy replicas to maintain capacity",
+                "1. Check dependency health (downstream services)",
+                "2. Identify error patterns in logs",
+                "3. If cascading: scale up replicas",
+                "4. If dependency down: toggle circuit breaker",
+                "5. Monitor error rate for 2 minutes",
             ],
-            "escalation": "If crash cause unclear, page service owner",
+            "escalation_threshold_minutes": 10,
+        },
+        "oom": {
+            "playbook_id": "RB-150",
+            "title": "Out-of-Memory Response",
             "auto_remediation_allowed": True,
-        },
-        "dependency_failure": {
-            "title": "Dependency Failure Runbook",
-            "severity_threshold": "Dependency error rate > 50% for 2 minutes",
             "steps": [
-                "1. Identify which dependency is failing",
-                "2. Check dependency's status page",
-                "3. If database: check connection pool, run failover if needed",
-                "4. If external API: toggle feature flag to use fallback/cache",
-                "5. If cache (Redis): flush and reconnect",
-                "6. Enable circuit breaker if available",
+                "1. Identify pod with OOM kill",
+                "2. Check memory profile in metrics",
+                "3. Restart affected pod",
+                "4. If recurring within 1h: scale horizontally",
             ],
-            "escalation": "Contact dependency team if external service",
-            "auto_remediation_allowed": True,
+            "escalation_threshold_minutes": 5,
         },
-        "certificate_expiry": {
-            "title": "Certificate Expiry Runbook",
-            "severity_threshold": "TLS cert expires in < 24 hours or already expired",
-            "steps": [
-                "1. Identify which certificate is expiring/expired",
-                "2. Check cert-manager logs for renewal failures",
-                "3. Manual renewal requires human approval",
-                "4. DO NOT auto-remediate - escalate immediately",
-            ],
-            "escalation": "Page security team immediately",
+        "rate_limiting": {
+            "playbook_id": "RB-410",
+            "title": "Rate Limiting Response",
             "auto_remediation_allowed": False,
+            "steps": [
+                "1. Identify rate-limited provider",
+                "2. Check current usage vs. quota",
+                "3. Toggle feature flag to fallback provider",
+                "4. Notify vendor relations team",
+            ],
+            "escalation_threshold_minutes": 20,
         },
     }
-    
-    data = runbooks.get(incident_type, {
-        "title": "Unknown Incident Type",
-        "steps": ["No runbook available. Escalate to on-call SRE."],
-        "escalation": "Page on-call SRE immediately",
-        "auto_remediation_allowed": False,
-    })
-    
-    return json.dumps(data, indent=2)
+    return runbooks.get(incident_type, {"playbook_id": "NONE", "title": "No runbook found", "auto_remediation_allowed": False, "steps": ["Escalate to on-call engineer"]})
 
 
 # =============================================================================
-# DIAGNOSTICS TOOLS
+# DIAGNOSTICS TOOLS (safe, read-only)
 # =============================================================================
 
+
+@tool(approval_mode="never_require")
 def get_metrics(
-    service_name: Annotated[str, Field(description="Name of the service to get metrics for")],
-    metric_type: Annotated[str, Field(description="Type of metric: 'cpu', 'memory', 'latency', 'error_rate', 'all'")] = "all",
-) -> str:
-    """Get current infrastructure metrics for a service.
-    Returns CPU, memory, latency, error rates, and pod status."""
-    
+    service: Annotated[str, "The service to query metrics for"],
+    metric_type: Annotated[str, "Type of metric: 'cpu', 'memory', 'latency', 'error_rate', 'connections'"],
+) -> dict:
+    """Query Prometheus-style metrics for a service. Returns current and historical values."""
     metrics_db = {
-        "payment-api": {
-            "cpu_percent": 45.2,
-            "memory_percent": 92.1,
-            "memory_mb": 3891,
-            "memory_limit_mb": 4096,
-            "latency_p50_ms": 180,
-            "latency_p95_ms": 2340,
-            "latency_p99_ms": 4520,
-            "error_rate_percent": 2.1,
-            "request_rate_rpm": 1250,
-            "pod_count": 4,
-            "pods": [
-                {"name": "payment-api-pod-1", "status": "Running", "cpu": 38.0, "memory_mb": 2100, "restarts": 0},
-                {"name": "payment-api-pod-2", "status": "Running", "cpu": 41.0, "memory_mb": 2400, "restarts": 0},
-                {"name": "payment-api-pod-3", "status": "Running", "cpu": 52.0, "memory_mb": 3891, "restarts": 4},
-                {"name": "payment-api-pod-4", "status": "Running", "cpu": 49.0, "memory_mb": 2800, "restarts": 0},
+        ("payment-api", "memory"): {
+            "current_mb": 1847,
+            "limit_mb": 2048,
+            "utilization_pct": 90.2,
+            "trend": "increasing",
+            "pods": {
+                "payment-api-pod-1": {"memory_mb": 512, "status": "healthy"},
+                "payment-api-pod-2": {"memory_mb": 489, "status": "healthy"},
+                "payment-api-pod-3": {"memory_mb": 846, "status": "OOMKilled"},
+            },
+        },
+        ("payment-api", "latency"): {
+            "p50_ms": 45,
+            "p95_ms": 890,
+            "p99_ms": 32000,
+            "baseline_p99_ms": 200,
+            "spike_factor": 160.0,
+        },
+        ("payment-api", "cpu"): {
+            "current_pct": 34.5,
+            "limit_pct": 80.0,
+            "status": "normal",
+        },
+        ("payment-api", "connections"): {
+            "active": 847,
+            "max_pool": 100,
+            "waiting": 312,
+            "status": "pool_exhausted",
+        },
+        ("order-service", "error_rate"): {
+            "current_pct": 23.4,
+            "baseline_pct": 0.1,
+            "spike_factor": 234.0,
+            "top_errors": [
+                {"code": 503, "count": 1247, "message": "Service Unavailable"},
+                {"code": 504, "count": 892, "message": "Gateway Timeout"},
             ],
         },
-        "order-service": {
-            "cpu_percent": 88.5,
-            "memory_percent": 61.0,
-            "memory_mb": 2500,
-            "memory_limit_mb": 4096,
-            "latency_p50_ms": 95,
-            "latency_p95_ms": 3100,
-            "latency_p99_ms": 8200,
-            "error_rate_percent": 12.4,
-            "request_rate_rpm": 3400,
-            "pod_count": 3,
-            "pods": [
-                {"name": "order-service-pod-1", "status": "Running", "cpu": 91.0, "memory_mb": 2500, "restarts": 0},
-                {"name": "order-service-pod-2", "status": "Running", "cpu": 89.0, "memory_mb": 2450, "restarts": 0},
-                {"name": "order-service-pod-3", "status": "Running", "cpu": 86.0, "memory_mb": 2550, "restarts": 0},
-            ],
+        ("order-service", "latency"): {
+            "p50_ms": 120,
+            "p95_ms": 4500,
+            "p99_ms": 12000,
+            "baseline_p99_ms": 300,
+            "spike_factor": 40.0,
         },
-        "notification-service": {
-            "cpu_percent": 22.0,
-            "memory_percent": 35.0,
-            "memory_mb": 1400,
-            "memory_limit_mb": 4096,
-            "latency_p50_ms": 450,
-            "latency_p95_ms": 12000,
-            "latency_p99_ms": 30000,
-            "error_rate_percent": 67.3,
-            "request_rate_rpm": 890,
-            "pod_count": 2,
-            "pods": [
-                {"name": "notification-svc-pod-1", "status": "Running", "cpu": 20.0, "memory_mb": 1400, "restarts": 0},
-                {"name": "notification-svc-pod-2", "status": "Running", "cpu": 24.0, "memory_mb": 1350, "restarts": 0},
+        ("notification-service", "error_rate"): {
+            "current_pct": 67.2,
+            "baseline_pct": 0.5,
+            "spike_factor": 134.4,
+            "top_errors": [
+                {"code": 429, "count": 8934, "message": "Too Many Requests"},
             ],
         },
     }
-    
-    data = metrics_db.get(service_name, {
-        "error": f"Service '{service_name}' not found in monitoring system",
-        "available_services": list(metrics_db.keys()),
-    })
-    
-    if metric_type != "all" and isinstance(data, dict) and "error" not in data:
-        filtered = {k: v for k, v in data.items() if metric_type in k or k == "pods"}
-        return json.dumps(filtered, indent=2)
-    
-    return json.dumps(data, indent=2)
+    result = metrics_db.get((service, metric_type))
+    if result:
+        return {"service": service, "metric": metric_type, **result}
+    return {"service": service, "metric": metric_type, "status": "no_data", "note": "Metric not available for this service"}
 
 
+@tool(approval_mode="never_require")
 def get_logs(
-    service_name: Annotated[str, Field(description="Name of the service to get logs for")],
-    severity: Annotated[str, Field(description="Log severity filter: 'ERROR', 'WARN', 'ALL'")] = "ERROR",
-    minutes: Annotated[int, Field(description="How many minutes of logs to retrieve")] = 5,
-) -> str:
-    """Retrieve recent log entries for a service.
-    Returns structured log entries with timestamps and context."""
-    
+    service: Annotated[str, "The service to pull logs from"],
+    severity: Annotated[str, "Log severity filter: 'error', 'warn', 'all'"] = "error",
+) -> dict:
+    """Pull recent logs from a service filtered by severity."""
     logs_db = {
-        "payment-api": [
-            {"timestamp": "2026-06-29T02:41:12Z", "level": "ERROR", "pod": "payment-api-pod-3", "msg": "java.lang.OutOfMemoryError: Java heap space", "context": "PaymentBatchProcessor.processQueue()"},
-            {"timestamp": "2026-06-29T02:41:13Z", "level": "ERROR", "pod": "payment-api-pod-3", "msg": "Container killed due to OOM: current usage 4096Mi exceeds limit", "context": "kubelet"},
-            {"timestamp": "2026-06-29T02:41:14Z", "level": "WARN", "pod": "payment-api-pod-3", "msg": "Pod restarted (restart count: 4)", "context": "kubelet"},
-            {"timestamp": "2026-06-29T02:41:45Z", "level": "WARN", "pod": "payment-api-pod-3", "msg": "Memory usage climbing rapidly: 3.2GB -> 3.8GB in 60 seconds", "context": "memory-monitor"},
-            {"timestamp": "2026-06-29T02:42:01Z", "level": "ERROR", "pod": "payment-api-pod-3", "msg": "Connection pool exhausted: 50/50 connections in use, 23 requests queued", "context": "HikariCP"},
-            {"timestamp": "2026-06-29T02:42:15Z", "level": "WARN", "pod": "payment-api-pod-1", "msg": "Increased latency detected on /api/v1/payments endpoint: p95=2340ms", "context": "latency-monitor"},
-        ],
-        "order-service": [
-            {"timestamp": "2026-06-29T02:40:01Z", "level": "ERROR", "pod": "order-service-pod-1", "msg": "Timeout waiting for response from payment-api: 5000ms exceeded", "context": "PaymentClient.charge()"},
-            {"timestamp": "2026-06-29T02:40:02Z", "level": "ERROR", "pod": "order-service-pod-2", "msg": "Timeout waiting for response from payment-api: 5000ms exceeded", "context": "PaymentClient.charge()"},
-            {"timestamp": "2026-06-29T02:40:05Z", "level": "ERROR", "pod": "order-service-pod-3", "msg": "Circuit breaker OPEN for payment-api: 10 failures in 60s", "context": "CircuitBreaker"},
-            {"timestamp": "2026-06-29T02:40:10Z", "level": "WARN", "pod": "order-service-pod-1", "msg": "Falling back to async payment processing queue", "context": "PaymentClient"},
-            {"timestamp": "2026-06-29T02:41:00Z", "level": "ERROR", "pod": "order-service-pod-1", "msg": "Request queue depth: 450 (threshold: 100)", "context": "RequestQueueMonitor"},
-            {"timestamp": "2026-06-29T02:41:30Z", "level": "ERROR", "pod": "order-service-pod-2", "msg": "HTTP 503 returned to client: upstream payment-api unavailable", "context": "OrderController.createOrder()"},
-        ],
-        "notification-service": [
-            {"timestamp": "2026-06-29T02:38:00Z", "level": "ERROR", "pod": "notification-svc-pod-1", "msg": "SMTP connection refused: smtp.emailprovider.com:587 - rate limit exceeded", "context": "EmailSender"},
-            {"timestamp": "2026-06-29T02:38:01Z", "level": "ERROR", "pod": "notification-svc-pod-1", "msg": "HTTP 429 Too Many Requests from email provider API", "context": "EmailProviderClient"},
-            {"timestamp": "2026-06-29T02:38:30Z", "level": "WARN", "pod": "notification-svc-pod-1", "msg": "Email queue backlog: 2,340 messages pending delivery", "context": "QueueMonitor"},
-            {"timestamp": "2026-06-29T02:39:00Z", "level": "ERROR", "pod": "notification-svc-pod-2", "msg": "Failed to send order confirmation to customer@example.com: provider rate limited", "context": "NotificationHandler"},
-            {"timestamp": "2026-06-29T02:40:00Z", "level": "WARN", "pod": "notification-svc-pod-1", "msg": "Backup email provider (backup-smtp) not configured - feature flag 'use_backup_email' is OFF", "context": "EmailProviderSelector"},
-        ],
-    }
-    
-    logs = logs_db.get(service_name, [
-        {"timestamp": "now", "level": "INFO", "pod": "unknown", "msg": f"No logs found for service '{service_name}'", "context": "log-collector"}
-    ])
-    
-    if severity != "ALL":
-        logs = [log for log in logs if log["level"] == severity or (severity == "ERROR" and log["level"] == "ERROR")]
-    
-    return json.dumps(logs[:10], indent=2)
-
-
-def check_dependencies(
-    service_name: Annotated[str, Field(description="Name of the service to check dependencies for")],
-) -> str:
-    """Check the health status of all dependencies for a given service.
-    Returns dependency map with current health status."""
-    
-    deps_db = {
         "payment-api": {
-            "dependencies": [
-                {"name": "postgres-primary", "type": "database", "status": "healthy", "latency_ms": 12, "connection_pool": "48/50 used"},
-                {"name": "redis-cache", "type": "cache", "status": "healthy", "latency_ms": 2, "hit_rate": "94%"},
-                {"name": "stripe-api", "type": "external_api", "status": "healthy", "latency_ms": 180, "error_rate": "0.1%"},
-                {"name": "rabbitmq", "type": "message_queue", "status": "healthy", "queue_depth": 12, "consumers": 4},
+            "error": [
+                {"timestamp": "2024-11-15T03:41:52Z", "level": "ERROR", "message": "java.lang.OutOfMemoryError: Java heap space", "pod": "payment-api-pod-3"},
+                {"timestamp": "2024-11-15T03:41:53Z", "level": "ERROR", "message": "Connection pool exhausted — 312 requests waiting", "pod": "payment-api-pod-3"},
+                {"timestamp": "2024-11-15T03:41:55Z", "level": "ERROR", "message": "Health check failed: /ready returned 503", "pod": "payment-api-pod-3"},
             ],
-            "notes": "Connection pool near exhaustion on postgres-primary",
+            "warn": [
+                {"timestamp": "2024-11-15T03:40:00Z", "level": "WARN", "message": "Memory usage at 85% — approaching limit", "pod": "payment-api-pod-3"},
+                {"timestamp": "2024-11-15T03:38:00Z", "level": "WARN", "message": "GC pause exceeded 500ms", "pod": "payment-api-pod-3"},
+            ],
         },
         "order-service": {
-            "dependencies": [
-                {"name": "payment-api", "type": "internal_service", "status": "degraded", "latency_ms": 2340, "error_rate": "12.4%"},
-                {"name": "postgres-orders", "type": "database", "status": "healthy", "latency_ms": 8, "connection_pool": "12/50 used"},
-                {"name": "inventory-service", "type": "internal_service", "status": "healthy", "latency_ms": 45, "error_rate": "0.0%"},
-                {"name": "redis-sessions", "type": "cache", "status": "healthy", "latency_ms": 1, "hit_rate": "98%"},
+            "error": [
+                {"timestamp": "2024-11-15T03:42:01Z", "level": "ERROR", "message": "Upstream payment-api returned 503 — circuit breaker OPEN", "pod": "order-service-pod-1"},
+                {"timestamp": "2024-11-15T03:42:01Z", "level": "ERROR", "message": "Timeout waiting for payment-api (30000ms exceeded)", "pod": "order-service-pod-2"},
+                {"timestamp": "2024-11-15T03:42:03Z", "level": "ERROR", "message": "Cascading failure: 1247 requests queued, backpressure applied", "pod": "order-service-pod-1"},
             ],
-            "notes": "payment-api is degraded - causing cascading failures in order processing",
+            "warn": [
+                {"timestamp": "2024-11-15T03:41:55Z", "level": "WARN", "message": "Retry budget exhausted for payment-api calls", "pod": "order-service-pod-2"},
+            ],
         },
         "notification-service": {
-            "dependencies": [
-                {"name": "email-provider-api", "type": "external_api", "status": "rate_limited", "latency_ms": 12000, "error_rate": "67%"},
-                {"name": "backup-email-provider", "type": "external_api", "status": "unconfigured", "latency_ms": None, "error_rate": None},
-                {"name": "postgres-notifications", "type": "database", "status": "healthy", "latency_ms": 5, "connection_pool": "8/50 used"},
-                {"name": "rabbitmq", "type": "message_queue", "status": "healthy", "queue_depth": 2340, "consumers": 2},
+            "error": [
+                {"timestamp": "2024-11-15T03:42:10Z", "level": "ERROR", "message": "SendGrid API returned 429: Rate limit exceeded (100/min)", "pod": "notification-svc-pod-1"},
+                {"timestamp": "2024-11-15T03:42:12Z", "level": "ERROR", "message": "Email queue depth: 8934, processing rate: 0/min", "pod": "notification-svc-pod-1"},
             ],
-            "notes": "Primary email provider is rate limiting. Backup provider feature flag is OFF.",
+            "warn": [
+                {"timestamp": "2024-11-15T03:40:00Z", "level": "WARN", "message": "Approaching SendGrid rate limit (89/100 per minute)", "pod": "notification-svc-pod-1"},
+            ],
         },
     }
-    
-    data = deps_db.get(service_name, {"error": f"No dependency map found for '{service_name}'"})
-    return json.dumps(data, indent=2)
+    service_logs = logs_db.get(service, {"error": [], "warn": []})
+    if severity == "all":
+        return {"service": service, "logs": service_logs["error"] + service_logs["warn"]}
+    return {"service": service, "logs": service_logs.get(severity, [])}
 
 
-# =============================================================================
-# REMEDIATION TOOLS
-# =============================================================================
-
-def restart_pod(
-    service_name: Annotated[str, Field(description="Name of the service")],
-    pod_name: Annotated[str, Field(description="Specific pod to restart, e.g. 'payment-api-pod-3'")],
-) -> str:
-    """Restart a specific pod. Returns the new pod status after restart.
-    This performs a graceful restart with a 30-second drain period."""
-    
-    return json.dumps({
-        "action": "restart_pod",
-        "pod": pod_name,
-        "service": service_name,
-        "status": "success",
-        "details": {
-            "old_pod_terminated": True,
-            "new_pod_status": "Running",
-            "new_pod_ready": True,
-            "restart_duration_seconds": 18,
-            "memory_after_restart_mb": 512,
-            "connections_drained": 23,
+@tool(approval_mode="never_require")
+def check_dependencies(
+    service: Annotated[str, "The service to check dependency health for"],
+) -> dict:
+    """Check the health of a service's upstream and downstream dependencies."""
+    deps = {
+        "payment-api": {
+            "upstream": [
+                {"service": "order-service", "status": "degraded", "note": "Sending high volume of retries"},
+                {"service": "checkout-ui", "status": "healthy", "note": ""},
+            ],
+            "downstream": [
+                {"service": "postgres-primary", "status": "healthy", "note": "Connections normal"},
+                {"service": "redis-cache", "status": "healthy", "note": "Hit rate 94%"},
+                {"service": "stripe-api", "status": "healthy", "note": "Latency normal"},
+            ],
         },
-        "message": f"Pod {pod_name} restarted successfully. Memory reset from 3891MB to 512MB.",
-    }, indent=2)
+        "order-service": {
+            "upstream": [
+                {"service": "checkout-ui", "status": "healthy", "note": ""},
+                {"service": "mobile-app", "status": "healthy", "note": ""},
+            ],
+            "downstream": [
+                {"service": "payment-api", "status": "unhealthy", "note": "503 errors, circuit breaker OPEN"},
+                {"service": "inventory-service", "status": "healthy", "note": ""},
+                {"service": "notification-service", "status": "degraded", "note": "Slow responses"},
+            ],
+        },
+        "notification-service": {
+            "upstream": [
+                {"service": "order-service", "status": "healthy", "note": ""},
+                {"service": "user-service", "status": "healthy", "note": ""},
+            ],
+            "downstream": [
+                {"service": "sendgrid-api", "status": "rate_limited", "note": "429 responses, quota: 100/min"},
+                {"service": "twilio-api", "status": "healthy", "note": "SMS fallback available"},
+            ],
+        },
+    }
+    return deps.get(service, {"upstream": [], "downstream": [], "note": "Unknown service"})
 
 
-def scale_service(
-    service_name: Annotated[str, Field(description="Name of the service to scale")],
-    target_replicas: Annotated[int, Field(description="Desired number of replicas")],
-) -> str:
-    """Scale a service to the specified number of replicas.
-    Returns the scaling status and estimated time to ready."""
-    
-    return json.dumps({
-        "action": "scale_service",
-        "service": service_name,
-        "previous_replicas": 3,
-        "target_replicas": target_replicas,
-        "status": "scaling_in_progress",
-        "new_pods_ready": target_replicas - 1,
-        "estimated_ready_seconds": 45,
-        "message": f"Scaling {service_name} from 3 to {target_replicas} replicas. {target_replicas - 3} new pods starting.",
-    }, indent=2)
+# =============================================================================
+# REMEDIATION TOOLS (dangerous — require approval in HITL mode)
+# =============================================================================
 
 
-def flush_cache(
-    cache_name: Annotated[str, Field(description="Name of the cache to flush, e.g. 'redis-cache'")],
-) -> str:
-    """Flush a cache instance. Use with caution - causes temporary cache miss spike."""
-    
-    return json.dumps({
-        "action": "flush_cache",
-        "cache": cache_name,
+@tool(approval_mode="always_require")
+def restart_pod(
+    service: Annotated[str, "The service that owns the pod"],
+    pod_id: Annotated[str, "The specific pod ID to restart (e.g. 'payment-api-pod-3')"],
+    reason: Annotated[str, "Reason for restart — logged for audit trail"],
+) -> dict:
+    """Restart a specific pod. This causes brief downtime for requests routed to this pod."""
+    return {
+        "action": "restart_pod",
+        "service": service,
+        "pod": pod_id,
         "status": "success",
-        "keys_evicted": 14523,
-        "message": f"Cache '{cache_name}' flushed. Expect elevated latency for 2-3 minutes while cache warms up.",
-        "warning": "Cache hit rate will drop temporarily. Monitor latency.",
-    }, indent=2)
+        "downtime_seconds": 8,
+        "message": f"Pod {pod_id} restarted successfully. New instance healthy after 8s.",
+    }
 
 
+@tool(approval_mode="always_require")
+def scale_service(
+    service: Annotated[str, "The service to scale"],
+    target_replicas: Annotated[int, "The desired number of replicas"],
+    reason: Annotated[str, "Reason for scaling — logged for audit trail"],
+) -> dict:
+    """Scale a service to a target replica count. Affects resource allocation and cost."""
+    current = {"payment-api": 3, "order-service": 4, "notification-service": 2}
+    return {
+        "action": "scale_service",
+        "service": service,
+        "previous_replicas": current.get(service, 2),
+        "target_replicas": target_replicas,
+        "status": "success",
+        "message": f"Scaled {service} to {target_replicas} replicas. New pods healthy.",
+        "estimated_cost_increase_pct": (target_replicas - current.get(service, 2)) * 15,
+    }
+
+
+@tool(approval_mode="always_require")
+def flush_cache(
+    service: Annotated[str, "The service whose cache to flush"],
+    cache_type: Annotated[str, "Cache type: 'redis', 'local', 'cdn'"],
+) -> dict:
+    """Flush a service's cache. May cause temporary latency spike as cache warms up."""
+    return {
+        "action": "flush_cache",
+        "service": service,
+        "cache_type": cache_type,
+        "status": "success",
+        "entries_cleared": 12847,
+        "message": f"Cache flushed for {service}. Expect elevated latency for 30-60s during warm-up.",
+    }
+
+
+@tool(approval_mode="always_require")
 def toggle_feature_flag(
-    flag_name: Annotated[str, Field(description="Name of the feature flag to toggle, e.g. 'use_backup_email'")],
-    enabled: Annotated[bool, Field(description="Whether to enable (True) or disable (False) the flag")],
-) -> str:
-    """Toggle a feature flag. Used for graceful degradation and failover."""
-    
-    return json.dumps({
+    flag_name: Annotated[str, "The feature flag to toggle (e.g. 'use_sendgrid', 'circuit_breaker_order_svc')"],
+    enabled: Annotated[bool, "Whether to enable (True) or disable (False) the flag"],
+    reason: Annotated[str, "Reason for toggling — logged for audit trail"],
+) -> dict:
+    """Toggle a feature flag. This immediately affects all traffic to the service."""
+    return {
         "action": "toggle_feature_flag",
         "flag": flag_name,
         "new_state": "enabled" if enabled else "disabled",
         "status": "success",
-        "propagation_time_seconds": 5,
-        "message": f"Feature flag '{flag_name}' set to {'enabled' if enabled else 'disabled'}. Changes propagate within 5 seconds.",
-        "affected_services": ["notification-service"] if "email" in flag_name else ["unknown"],
-    }, indent=2)
-
-
-# =============================================================================
-# VERIFICATION TOOLS
-# =============================================================================
-
-def get_health_status(
-    service_name: Annotated[str, Field(description="Name of the service to check health for")],
-) -> str:
-    """Check current health status of a service after remediation.
-    Returns comprehensive health check results."""
-    
-    # Simulates post-remediation state (things are better now)
-    return json.dumps({
-        "service": service_name,
-        "overall_status": "healthy",
-        "checks": {
-            "liveness": "passing",
-            "readiness": "passing",
-            "latency_p95_ms": 280,
-            "error_rate_percent": 0.3,
-            "cpu_percent": 42.0,
-            "memory_percent": 48.0,
-        },
-        "message": f"Service {service_name} is healthy. All checks passing.",
-    }, indent=2)
-
-
-def run_smoke_test(
-    service_name: Annotated[str, Field(description="Name of the service to run smoke tests against")],
-) -> str:
-    """Run a suite of smoke tests against a service to verify it's working correctly.
-    Returns test results with pass/fail details."""
-    
-    tests = {
-        "payment-api": [
-            {"test": "POST /api/v1/payments - create payment", "status": "pass", "duration_ms": 245},
-            {"test": "GET /api/v1/payments/:id - get payment", "status": "pass", "duration_ms": 32},
-            {"test": "POST /api/v1/payments/:id/refund - refund", "status": "pass", "duration_ms": 310},
-            {"test": "GET /health - health check", "status": "pass", "duration_ms": 5},
-        ],
-        "order-service": [
-            {"test": "POST /api/v1/orders - create order", "status": "pass", "duration_ms": 180},
-            {"test": "GET /api/v1/orders/:id - get order", "status": "pass", "duration_ms": 28},
-            {"test": "PUT /api/v1/orders/:id/cancel - cancel", "status": "pass", "duration_ms": 95},
-            {"test": "GET /health - health check", "status": "pass", "duration_ms": 3},
-        ],
-        "notification-service": [
-            {"test": "POST /api/v1/notify/email - send email", "status": "pass", "duration_ms": 520},
-            {"test": "POST /api/v1/notify/sms - send sms", "status": "pass", "duration_ms": 180},
-            {"test": "GET /api/v1/notify/queue-depth - check queue", "status": "pass", "duration_ms": 8},
-            {"test": "GET /health - health check", "status": "pass", "duration_ms": 4},
-        ],
+        "affected_services": ["notification-service"] if "sendgrid" in flag_name else ["order-service"],
+        "message": f"Flag '{flag_name}' set to {'enabled' if enabled else 'disabled'}. Change propagated in <1s.",
     }
-    
-    service_tests = tests.get(service_name, [
-        {"test": "GET /health", "status": "pass", "duration_ms": 5}
-    ])
-    
-    all_pass = all(t["status"] == "pass" for t in service_tests)
-    
-    return json.dumps({
-        "service": service_name,
-        "tests_run": len(service_tests),
-        "tests_passed": sum(1 for t in service_tests if t["status"] == "pass"),
-        "tests_failed": sum(1 for t in service_tests if t["status"] != "pass"),
-        "overall": "PASS" if all_pass else "FAIL",
-        "results": service_tests,
-        "message": f"All {len(service_tests)} smoke tests passing for {service_name}." if all_pass else "Some tests failed.",
-    }, indent=2)
+
+
+@tool(approval_mode="always_require")
+def escalate_to_human(
+    service: Annotated[str, "The affected service"],
+    severity: Annotated[str, "Current severity assessment"],
+    summary: Annotated[str, "Brief summary of the situation for the on-call engineer"],
+) -> dict:
+    """Escalate to on-call engineer via PagerDuty. Use when auto-remediation is not safe."""
+    return {
+        "action": "escalate",
+        "service": service,
+        "paged_engineer": "oncall@company.com",
+        "status": "acknowledged",
+        "message": f"Escalation sent. On-call engineer acknowledged within 2 minutes.",
+    }
 
 
 # =============================================================================
-# COMMUNICATIONS TOOLS
+# VERIFICATION TOOLS (safe, read-only)
 # =============================================================================
 
+
+@tool(approval_mode="never_require")
+def get_health_status(
+    service: Annotated[str, "The service to health-check"],
+) -> dict:
+    """Run health check against a service's /ready and /live endpoints."""
+    # Simulates post-remediation health (assumes fix was applied)
+    return {
+        "service": service,
+        "ready": True,
+        "live": True,
+        "response_time_ms": 12,
+        "checks": {
+            "database": "pass",
+            "cache": "pass",
+            "downstream_deps": "pass",
+        },
+        "message": f"All health checks passing for {service}.",
+    }
+
+
+@tool(approval_mode="never_require")
+def run_smoke_test(
+    service: Annotated[str, "The service to run smoke tests against"],
+    test_suite: Annotated[str, "Which test suite: 'basic', 'full', 'critical_path'"] = "critical_path",
+) -> dict:
+    """Run smoke tests against a service to verify it's functioning correctly."""
+    suites = {
+        "basic": {"tests_run": 5, "passed": 5, "failed": 0, "duration_s": 3},
+        "critical_path": {"tests_run": 12, "passed": 12, "failed": 0, "duration_s": 8},
+        "full": {"tests_run": 47, "passed": 46, "failed": 1, "duration_s": 45},
+    }
+    result = suites.get(test_suite, suites["basic"])
+    return {
+        "service": service,
+        "suite": test_suite,
+        **result,
+        "status": "pass" if result["failed"] == 0 else "fail",
+        "message": f"Smoke tests {'all passed' if result['failed'] == 0 else 'FAILED — see details'}.",
+    }
+
+
+# =============================================================================
+# COMMUNICATIONS TOOLS (side-effect, but non-destructive)
+# =============================================================================
+
+
+@tool(approval_mode="never_require")
 def post_to_slack(
-    channel: Annotated[str, Field(description="Slack channel to post to, e.g. '#incidents' or '#engineering'")],
-    message: Annotated[str, Field(description="The incident message/update to post")],
-    severity: Annotated[str, Field(description="Severity level for formatting: 'critical', 'warning', 'resolved'")] = "warning",
-) -> str:
-    """Post an incident update to a Slack channel.
-    Returns confirmation of the posted message."""
-    
-    emoji = {"critical": "🔴", "warning": "🟡", "resolved": "🟢"}.get(severity, "⚪")
-    
-    return json.dumps({
-        "action": "post_to_slack",
+    channel: Annotated[str, "Slack channel (e.g. '#incidents', '#platform-team')"],
+    message: Annotated[str, "The message to post"],
+    severity: Annotated[str, "Message severity for formatting: 'critical', 'warning', 'resolved'"],
+) -> dict:
+    """Post a message to a Slack channel."""
+    return {
+        "action": "slack_post",
         "channel": channel,
         "status": "sent",
-        "message_preview": f"{emoji} {message[:100]}...",
-        "timestamp": datetime.now().isoformat(),
-        "thread_id": "incident-2026-06-29-0241",
-    }, indent=2)
+        "thread_id": "T-20241115-0342",
+        "message": f"Posted to {channel}: {message[:80]}...",
+    }
 
 
+@tool(approval_mode="never_require")
 def create_incident_ticket(
-    title: Annotated[str, Field(description="Incident ticket title")],
-    description: Annotated[str, Field(description="Detailed description of the incident and resolution")],
-    severity: Annotated[str, Field(description="Ticket severity: 'P1', 'P2', 'P3'")] = "P2",
-    service: Annotated[str, Field(description="Affected service name")] = "unknown",
-) -> str:
-    """Create a post-incident ticket for tracking and post-mortem.
-    Returns the ticket ID and URL."""
-    
-    ticket_id = f"INC-{random.randint(10000, 99999)}"
-    
-    return json.dumps({
-        "action": "create_incident_ticket",
-        "ticket_id": ticket_id,
+    title: Annotated[str, "Ticket title"],
+    severity: Annotated[str, "Severity: P1/P2/P3/P4"],
+    description: Annotated[str, "Detailed description of the incident"],
+    root_cause: Annotated[str, "Identified root cause"],
+    resolution: Annotated[str, "Steps taken to resolve"],
+) -> dict:
+    """Create an incident ticket in the tracking system (e.g., Jira/ServiceNow)."""
+    return {
+        "action": "create_ticket",
+        "ticket_id": "INC-2024-0893",
         "title": title,
         "severity": severity,
-        "service": service,
         "status": "created",
-        "url": f"https://jira.company.com/browse/{ticket_id}",
-        "assigned_to": "on-call-sre-team",
-        "message": f"Incident ticket {ticket_id} created successfully.",
-    }, indent=2)
+        "assigned_to": "platform-oncall",
+        "message": f"Ticket INC-2024-0893 created: {title}",
+    }
 
 
+@tool(approval_mode="never_require")
 def update_status_page(
-    service_name: Annotated[str, Field(description="Service to update status for")],
-    status: Annotated[str, Field(description="New status: 'operational', 'degraded', 'partial_outage', 'major_outage'")],
-    message: Annotated[str, Field(description="Public-facing status message")],
-) -> str:
-    """Update the public status page for a service.
-    Returns confirmation of the status page update."""
-    
-    return json.dumps({
-        "action": "update_status_page",
-        "service": service_name,
-        "new_status": status,
-        "message": message,
-        "status": "updated",
-        "url": f"https://status.company.com/services/{service_name}",
-        "public_message_posted": True,
-    }, indent=2)
-
-
-def escalate_to_human(
-    reason: Annotated[str, Field(description="Why automated remediation cannot handle this")],
-    service_name: Annotated[str, Field(description="Affected service")],
-    findings: Annotated[str, Field(description="Summary of diagnostics findings so far")],
-) -> str:
-    """Escalate an incident to a human operator when automated remediation is not possible.
-    Pages the on-call engineer with full context."""
-    
-    return json.dumps({
-        "action": "escalate_to_human",
-        "status": "paged",
-        "on_call_engineer": "Sarah Chen (SRE Lead)",
-        "page_method": "PagerDuty + SMS + Phone",
-        "context_provided": {
-            "service": service_name,
-            "reason": reason,
-            "diagnostics_summary": findings,
-        },
-        "message": "On-call engineer paged with full incident context. ETA response: 5-10 minutes.",
-    }, indent=2)
+    service: Annotated[str, "The affected service"],
+    status: Annotated[str, "Status: 'investigating', 'identified', 'monitoring', 'resolved'"],
+    message: Annotated[str, "Public-facing status message"],
+) -> dict:
+    """Update the public status page for customers."""
+    return {
+        "action": "status_page_update",
+        "service": service,
+        "status": status,
+        "published": True,
+        "message": f"Status page updated: {service} — {status}",
+    }

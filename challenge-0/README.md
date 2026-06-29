@@ -62,8 +62,8 @@ az account show
 Your coach will provide you with the following values (on a slide or handout):
 
 ```
-AZURE_AI_PROJECT_ENDPOINT=https://...
-AZURE_AI_MODEL_DEPLOYMENT_NAME=gpt-4o
+FOUNDRY_PROJECT_ENDPOINT=https://your-project.services.ai.azure.com/api/projects/...
+FOUNDRY_MODEL=gpt-4o
 ```
 
 Copy `.env.example` to `.env` and paste these values:
@@ -117,13 +117,13 @@ Open `challenge-0/verify-setup.ipynb` and run all cells. You should see:
 
 ```
 ✅ Python 3.11
-✅ agent-framework installed
+✅ agent-framework installed (>= 1.0.0)
 ✅ azure-identity installed
-✅ python-dotenv installed
-✅ Project endpoint: https://...
-✅ Model deployment: gpt-4o
+✅ pydantic installed
+✅ FOUNDRY_PROJECT_ENDPOINT set
+✅ FOUNDRY_MODEL set
 ✅ Azure CLI authenticated
-✅ Agent response: Setup complete!
+✅ Test agent responded with structured output
 
 🎉 ALL CHECKS PASSED — You're ready for the workshop!
 ```
@@ -133,7 +133,7 @@ Open `challenge-0/verify-setup.ipynb` and run all cells. You should see:
 ## Success Criteria
 
 - [ ] You can run `az account show` and see your subscription
-- [ ] Your `.env` file has `AZURE_AI_PROJECT_ENDPOINT` set
+- [ ] Your `.env` file has `FOUNDRY_PROJECT_ENDPOINT` set
 - [ ] `verify-setup.ipynb` runs all cells with green checkmarks
 - [ ] You receive a response from the test agent
 
@@ -141,4 +141,4 @@ Open `challenge-0/verify-setup.ipynb` and run all cells. You should see:
 
 ## ➡️ Next Challenge
 
-You're all set! Head to **[Challenge 1: Specialized Agents with Tools](../challenge-1/README.md)** to start building your multi-agent system.
+You're all set! Head to **[Challenge 1: Structured Agents](../challenge-1/README.md)** to start building your multi-agent system.

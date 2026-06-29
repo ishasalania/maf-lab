@@ -1,32 +1,32 @@
 [
   {
-    "id": "alert-001",
-    "title": "High Latency on payment-api",
+    "id": "INC-2024-0892",
+    "title": "Payment API P99 Latency > 30s",
     "service": "payment-api",
-    "severity": "high",
-    "triggered_at": "2026-06-29T02:41:00Z",
-    "description": "p95 latency for payment-api has exceeded 2000ms threshold for 5 minutes. Current p95: 2340ms. Customers are experiencing slow checkouts.",
-    "alert_source": "Prometheus/AlertManager",
-    "expected_resolution": "Restart pod-3 (OOM memory leak) and verify latency drops back to normal"
-  },
-  {
-    "id": "alert-002",
-    "title": "Error Rate Spike on order-service",
-    "service": "order-service",
     "severity": "critical",
-    "triggered_at": "2026-06-29T02:42:00Z",
-    "description": "5xx error rate for order-service has spiked to 12.4% (threshold: 5%). Orders are failing to process. This appears to be a cascading failure from an upstream dependency.",
-    "alert_source": "Prometheus/AlertManager",
-    "expected_resolution": "Root cause is payment-api degradation. Fixing payment-api should resolve cascading failures."
+    "incident_type": "high_latency",
+    "description": "payment-api pod-3 OOMKilled. P99 latency spiked to 32s (baseline: 200ms). Connection pool exhausted with 312 requests queued.",
+    "environment": "production",
+    "detected_at": "2024-11-15T03:42:00Z"
   },
   {
-    "id": "alert-003",
-    "title": "Email Delivery Failures on notification-service",
+    "id": "INC-2024-0893",
+    "title": "Order Service Error Rate 23%",
+    "service": "order-service",
+    "severity": "high",
+    "incident_type": "error_rate",
+    "description": "order-service error rate at 23.4% (baseline 0.1%). Cascading from upstream payment-api failure. Circuit breaker OPEN.",
+    "environment": "production",
+    "detected_at": "2024-11-15T03:42:30Z"
+  },
+  {
+    "id": "INC-2024-0894",
+    "title": "Notification Service Email Delivery Failing",
     "service": "notification-service",
-    "severity": "medium",
-    "triggered_at": "2026-06-29T02:38:00Z",
-    "description": "Email delivery success rate has dropped to 33%. Primary email provider is returning HTTP 429 (rate limited). 2,340 messages in queue pending delivery.",
-    "alert_source": "Custom/QueueMonitor",
-    "expected_resolution": "Toggle feature flag 'use_backup_email' to enable backup email provider"
+    "severity": "low",
+    "incident_type": "rate_limiting",
+    "description": "SendGrid returning 429 (rate limited). 8934 emails queued. Non-critical — customers receive emails with delay.",
+    "environment": "production",
+    "detected_at": "2024-11-15T03:42:45Z"
   }
 ]

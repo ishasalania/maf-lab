@@ -1,167 +1,60 @@
-# Challenge 3 — Memory & Learning
+# Challenge 3 — Human-in-the-Loop & Resilience
 
 **Expected Duration: 25 minutes**
 
 ## Introduction
 
-Your workflow handles incidents autonomously — but every time, it investigates from scratch. A human SRE gets **faster** over time because they remember: "Oh, this is the same memory leak from last Tuesday."
+Your workflow routes correctly — but would you trust it to `restart_pod` in production
+at 3 AM without asking anyone? What if the diagnostics confidence is only 60%?
 
-In this challenge, you'll add **incident memory** so your system:
-- Recognizes recurring issues instantly
-- References past resolutions
-- Provides estimated time-to-resolve based on history
-- Gets smarter with every incident it handles
+Production agent systems need **human oversight** for dangerous operations and
+**resilience patterns** when automated verification fails. MAF provides these
+through tool-level approval, explicit workflow pause/resume, and native Python
+control flow in functional workflows.
 
----
+## Key Concepts
 
-## What You're Building
+| Concept | API | Why It Matters |
+|---------|-----|----------------|
+| Tool approval | `@tool(approval_mode="always_require")` | Dangerous tool calls need human sign-off |
+| Explicit HITL | `ctx.request_info()` | Pause workflow, ask human, resume |
+| Workflow resume | `workflow.run(responses={...})` | Continue paused workflow with human input |
+| Workflow state | `WorkflowRunState.IDLE_WITH_PENDING_REQUESTS` | Detect when workflow is waiting |
+| Functional workflows | `@workflow` decorator | Plain Python async functions as workflows |
+| Checkpointing | `@step` decorator | Cache expensive results across resume cycles |
+| Retry loops | Native for/while | Python control flow in functional workflows |
+
+## What You'll Build
+
+1. **Tool approval workflow** — agent calls `restart_pod()`, workflow pauses, you approve
+2. **Functional HITL workflow** — explicit `ctx.request_info()` to review a plan before execution
+3. **Retry pattern** — verification loop that retries 3x before escalating
+
+## Getting Started
+
+Open the notebook:
 
 ```
-Alert fires
-    │
-    ▼
-┌─────────────────────┐
-│ Memory Provider      │ ◄── Searches past incidents
-│ "This matches INC-  │     Returns: root cause, resolution, TTR
-│  from 2 days ago"   │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│ Triage Agent         │  Now KNOWS this is recurring
-│ (enhanced with       │  Skips unnecessary investigation
-│  memory context)     │  Fast-tracks to known-good fix
-└─────────────────────┘
-          │
-          ▼
-    [Rest of workflow — faster because diagnosis is already known]
+challenge-3/challenge.ipynb
 ```
-
----
-
-## Tasks
-
-Open `challenge-3/challenge.ipynb` and complete the following:
-
-### Task 1: Build an Incident Memory Store
-
-Create an `IncidentMemoryStore` class that:
-- Holds past incident resolutions (pre-seeded with 4 examples)
-- Has a `search(service, keywords)` method to find relevant matches
-- Has a `store(memory)` method to save new resolutions
-
-### Task 2: Create a Memory Tool
-
-Wrap the memory store as a callable tool function `search_incident_memory(service_name, keywords)` that agents can invoke.
-
-### Task 3: Build a Memory-Enhanced Triage Agent
-
-Create a triage agent with 3 tools:
-1. `search_incident_memory` — check past incidents FIRST
-2. `check_alert_history` — recent alert patterns
-3. `get_runbook` — standard procedures
-
-Observe how it immediately says: "This matches a past incident from 2 days ago — resolution was restarting pod-3."
-
-### Task 4: Store New Resolutions
-
-After the workflow resolves an incident, store the resolution in memory so the next occurrence benefits.
-
----
-
-## Compare: Before vs. After Memory
-
-| Without Memory (Challenge 1) | With Memory (Challenge 3) |
-|---|---|
-| Investigates from scratch every time | Immediately recognizes recurring issue |
-| Triage takes full investigation | Fast-tracks with known pattern |
-| No historical TTR estimate | "Expected resolution: 6-8 minutes" |
-| No link to related tickets | "Related: JIRA-4521" |
-| Remediation may try wrong fix first | Jumps to known-good fix |
-
----
-
-## Production Patterns
-
-In a real system, you'd enhance this with:
-
-| Pattern | Implementation |
-|---------|---------------|
-| **Semantic search** | Azure AI Search with embeddings for fuzzy matching |
-| **Confidence decay** | Recent resolutions weighted higher than old ones |
-| **Human feedback loop** | SREs mark if suggested resolution was helpful |
-| **Cross-service correlation** | "When payment-api goes down, order-service follows" |
-| **Automated runbook updates** | Memory feeds back into runbook maintenance |
-
----
-
-## Hints
-
-<details>
-<summary>💡 Hint: Pre-seeded memories</summary>
-
-The memory store includes 4 past incidents:
-1. payment-api memory leak (2 days ago) — restart pod-3
-2. payment-api connection pool exhaustion (4 days ago) — restart + increase pool
-3. notification-service rate limiting (yesterday) — toggle backup email
-4. user-service cert expiry (24 days ago) — manual fix by security team
-
-When you search for "payment-api", it should find incidents #1 and #2.
-</details>
-
-<details>
-<summary>💡 Hint: The learning loop</summary>
-
-After storing a new resolution, the next time the same alert fires, `search_incident_memory` will return it. The agent sees: "This happened 3 times now, same root cause, same fix." This is how the system gets progressively smarter.
-</details>
-
----
 
 ## Success Criteria
 
-- [ ] Memory-enhanced triage agent finds past incidents for payment-api
-- [ ] Agent references the previous resolution in its output
-- [ ] New incident resolution is stored in memory after completion
-- [ ] System would handle the SAME alert faster the second time
+- [ ] HITL workflow wired with `WorkflowBuilder`
+- [ ] Approval loop handles `get_request_info_events()` and responds
+- [ ] Workflow resumes after approval and produces output
+- [ ] Functional workflow with `ctx.request_info()` pauses correctly
+- [ ] Resume with `responses={...}` completes the functional workflow
+- [ ] Retry workflow uses a loop with max retries + escalation fallback
 
----
+## Tips
 
-## 🎉 Workshop Complete!
+- `events.get_final_state()` tells you if the workflow is paused (`IDLE_WITH_PENDING_REQUESTS`) or done (`IDLE`)
+- `event.data.to_function_approval_response(approved=True)` creates the response format MAF expects
+- In functional workflows, `@step` saves results — the function won't re-run on resume
+- The approval loop pattern: `while request_info_events:` → process → `workflow.run(responses=...)` → check again
 
-Congratulations! You've built a production-grade multi-agent incident response system.
+## ➡️ Bonus
 
-### What You Achieved
-
-| Challenge | Concept | What You Built |
-|-----------|---------|----------------|
-| 0 | Setup | Azure AI Foundry connection |
-| 1 | Motivation | Saw why single agents fail |
-| 2 | Task Decomposition + Tools | 5 specialized agents with 15 tools |
-| 3 | Agent Coordination | Automated workflow with conditional routing |
-| 4 | Memory Patterns | Learning system that improves over time |
-
-### The Journey: Copilot → Orchestrated Agents
-
-```
-Single Agent          →  Specialized Agents  →  Workflow          →  Memory
-(generic advice)         (real tools)            (autonomous)         (learns)
-```
-
-### Next Steps (After the Workshop)
-
-| Topic | What to explore |
-|-------|-----------------|
-| **Human-in-the-loop** | Add approval gates before destructive actions |
-| **Structured outputs** | Use Pydantic models for reliable agent responses |
-| **MCP integration** | Connect to real Prometheus/PagerDuty via MCP protocol |
-| **Observability** | Add OpenTelemetry tracing to monitor agent decisions |
-| **Evaluation** | Red-team test with adversarial incident scenarios |
-
-> **Still have time?** Head to **[Challenge 4: Advanced Patterns (Bonus)](../challenge-4/README.md)** for stretch goals!
-
-### Resources
-
-- [Microsoft Agent Framework Docs](https://learn.microsoft.com/en-us/agent-framework/)
-- [Agent Framework GitHub](https://github.com/microsoft/agent-framework)
-- [Azure AI Foundry](https://ai.azure.com)
-- This workshop: [github.com/ishasalania/maf-lab](https://github.com/ishasalania/maf-lab)
+If you finish early, head to [Challenge 4: Advanced Composition](../challenge-4/README.md) for
+workflow-as-agent patterns, sub-workflow composition, parallelism, and observability.

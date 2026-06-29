@@ -1,9 +1,11 @@
-"""Complete solution: Full incident response workflow.
+"""Complete reference implementation — MAF Incident Response Workflow.
 
-This is the reference implementation for Step 3.
-Use this if you get stuck during the workshop.
+This combines all challenges:
+- Challenge 1: Structured agents with Pydantic response_format
+- Challenge 2: WorkflowBuilder with switch-case routing
+- Challenge 3: HITL tool approval loop
 
-Run with: python solution/full_workflow.py
+Run: python solution/full_workflow.py
 """
 
 import asyncio
@@ -11,230 +13,269 @@ import json
 import os
 import sys
 from dataclasses import dataclass
-from pathlib import Path
+from typing import Any, Literal
 
-# Add parent dir to path so we can import tools
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 
-from agent_framework import WorkflowBuilder, WorkflowContext, executor
-from agent_framework.azure import AzureAIAgentClient
-from azure.identity.aio import AzureCliCredential
+from agent_framework import (
+    Agent,
+    AgentExecutor,
+    AgentExecutorRequest,
+    AgentExecutorResponse,
+    Case,
+    Content,
+    Default,
+    Message,
+    WorkflowBuilder,
+    WorkflowContext,
+    executor,
+)
+from agent_framework.foundry import FoundryChatClient
+from agent_framework.openai import OpenAIChatOptions
+from azure.identity import AzureCliCredential
+from typing_extensions import Never
 
 from tools.mock_infra import (
-    check_alert_history, get_runbook,
-    get_metrics, get_logs, check_dependencies,
-    restart_pod, scale_service, flush_cache, toggle_feature_flag, escalate_to_human,
-    get_health_status, run_smoke_test,
-    post_to_slack, create_incident_ticket, update_status_page,
+    check_alert_history,
+    check_dependencies,
+    flush_cache,
+    get_health_status,
+    get_logs,
+    get_metrics,
+    get_runbook,
+    post_to_slack,
+    create_incident_ticket,
+    restart_pod,
+    run_smoke_test,
+    scale_service,
+    toggle_feature_flag,
 )
 
-load_dotenv(Path(__file__).parent.parent / ".env")
+load_dotenv()
+
+# =============================================================================
+# STRUCTURED OUTPUT MODELS
+# =============================================================================
+
+
+class TriageResult(BaseModel):
+    severity: Literal["critical", "high", "medium", "low"]
+    is_recurring: bool
+    auto_remediation_allowed: bool
+    root_cause_hypothesis: str
+    recommended_action: str
+    escalation_threshold_minutes: int
+
+
+class DiagnosticsResult(BaseModel):
+    root_cause: str
+    evidence: list[str]
+    affected_components: list[str]
+    confidence: float = Field(ge=0.0, le=1.0)
+    recommended_fix: str
+    requires_restart: bool
+
+
+class RemediationPlan(BaseModel):
+    action: Literal["restart_pod", "scale_service", "flush_cache", "toggle_feature_flag", "escalate"]
+    target_service: str
+    target_details: str
+    risk_level: Literal["low", "medium", "high"]
+    estimated_downtime_seconds: int
+    rollback_strategy: str
+    requires_approval: bool
+
+
+class VerificationResult(BaseModel):
+    service_healthy: bool
+    tests_passed: int
+    tests_failed: int
+    verification_status: Literal["pass", "fail", "degraded"]
+    details: str
+
+
+# =============================================================================
+# AGENT FACTORIES
+# =============================================================================
+
+
+def make_client() -> FoundryChatClient:
+    return FoundryChatClient(
+        project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
+        model=os.environ["FOUNDRY_MODEL"],
+        credential=AzureCliCredential(),
+    )
+
+
+def create_triage_agent() -> Agent:
+    return Agent(
+        client=make_client(),
+        name="TriageAgent",
+        instructions=(
+            "You are an incident Triage Agent. When given an alert:\n"
+            "1. Call check_alert_history with the service name\n"
+            "2. Call get_runbook with the incident_type\n"
+            "Classify severity and recommend next steps."
+        ),
+        tools=[check_alert_history, get_runbook],
+        default_options=OpenAIChatOptions[Any](response_format=TriageResult),
+    )
+
+
+def create_diagnostics_agent() -> Agent:
+    return Agent(
+        client=make_client(),
+        name="DiagnosticsAgent",
+        instructions=(
+            "You are an incident Diagnostics Agent. Investigate root cause:\n"
+            "1. Call get_metrics for relevant metrics (memory, latency, error_rate)\n"
+            "2. Call get_logs with severity='error'\n"
+            "3. Call check_dependencies\n"
+            "Synthesize findings with confidence score."
+        ),
+        tools=[get_metrics, get_logs, check_dependencies],
+        default_options=OpenAIChatOptions[Any](response_format=DiagnosticsResult),
+    )
+
+
+def create_remediation_agent() -> Agent:
+    return Agent(
+        client=make_client(),
+        name="RemediationExecutor",
+        instructions=(
+            "You execute remediation plans. Call the appropriate tool:\n"
+            "- restart_pod for pod restarts\n"
+            "- scale_service for scaling\n"
+            "- flush_cache for cache issues\n"
+            "- toggle_feature_flag for flag changes\n"
+            "Provide a clear 'reason' for the audit trail."
+        ),
+        tools=[restart_pod, scale_service, flush_cache, toggle_feature_flag],
+    )
+
+
+# =============================================================================
+# WORKFLOW EXECUTORS
+# =============================================================================
 
 
 @dataclass
-class IncidentState:
-    alert_title: str = ""
-    alert_service: str = ""
-    alert_severity: str = ""
-    alert_description: str = ""
-    triage_result: str = ""
-    diagnostics_result: str = ""
-    remediation_result: str = ""
-    verification_result: str = ""
-    comms_result: str = ""
-    is_resolved: bool = False
-    retry_count: int = 0
-    max_retries: int = 1
+class RoutingDecision:
+    severity: str
+    service: str
 
 
-@executor
-async def triage(ctx: WorkflowContext[IncidentState]) -> str:
-    state = ctx.state
-    print(f"\n{'='*60}\n📋 TRIAGE\n{'='*60}")
-
-    async with (
-        AzureCliCredential() as credential,
-        AzureAIAgentClient(async_credential=credential) as client,
-    ):
-        agent = client.create_agent(
-            name="TriageAgent",
-            instructions="""You are an incident Triage Agent.
-1. Use check_alert_history to see if this is recurring
-2. Use get_runbook to find the playbook
-3. Output: severity, recurring status, auto-remediation allowed, recommended incident type.
-Be concise.""",
-            tools=[check_alert_history, get_runbook],
-        )
-
-        result = await agent.run(
-            f"Alert: {state.alert_title}\nService: {state.alert_service}\n"
-            f"Severity: {state.alert_severity}\nDescription: {state.alert_description}"
-        )
-        state.triage_result = result.text
-        print(f"\n{result.text}")
-
-    return "diagnostics"
+@executor(id="ingest_alert")
+async def ingest_alert(alert_json: str, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
+    alert = json.loads(alert_json)
+    ctx.set_state("alert", alert)
+    ctx.set_state("service", alert["service"])
+    user_msg = Message("user", contents=[
+        f"New alert:\nTitle: {alert['title']}\nService: {alert['service']}\n"
+        f"Type: {alert['incident_type']}\nDescription: {alert['description']}"
+    ])
+    await ctx.send_message(AgentExecutorRequest(messages=[user_msg], should_respond=True))
 
 
-@executor
-async def diagnostics(ctx: WorkflowContext[IncidentState]) -> str:
-    state = ctx.state
-    print(f"\n{'='*60}\n🔍 DIAGNOSTICS\n{'='*60}")
-
-    async with (
-        AzureCliCredential() as credential,
-        AzureAIAgentClient(async_credential=credential) as client,
-    ):
-        agent = client.create_agent(
-            name="DiagnosticsAgent",
-            instructions="""You are a Diagnostics Agent. Investigate using your tools.
-1. get_metrics for resource utilization
-2. get_logs for error patterns
-3. check_dependencies for cascading failures
-Output: specific root cause with evidence and exact remediation action needed.""",
-            tools=[get_metrics, get_logs, check_dependencies],
-        )
-
-        result = await agent.run(
-            f"Triage summary:\n{state.triage_result}\n\n"
-            f"Service: {state.alert_service}\nInvestigate root cause."
-        )
-        state.diagnostics_result = result.text
-        print(f"\n{result.text}")
-
-    return "remediation"
+@executor(id="parse_triage")
+async def parse_triage(response: AgentExecutorResponse, ctx: WorkflowContext[RoutingDecision]) -> None:
+    triage = TriageResult.model_validate_json(response.agent_response.text)
+    ctx.set_state("triage_result", triage)
+    await ctx.send_message(RoutingDecision(severity=triage.severity, service=ctx.get_state("service")))
 
 
-@executor
-async def remediation(ctx: WorkflowContext[IncidentState]) -> str:
-    state = ctx.state
-    print(f"\n{'='*60}\n🔧 REMEDIATION (attempt {state.retry_count + 1})\n{'='*60}")
-
-    async with (
-        AzureCliCredential() as credential,
-        AzureAIAgentClient(async_credential=credential) as client,
-    ):
-        agent = client.create_agent(
-            name="RemediationAgent",
-            instructions="""You are a Remediation Agent. Execute the fix based on diagnostics.
-- OOM/memory leak → restart_pod
-- High CPU/traffic → scale_service
-- Stale cache → flush_cache
-- External dependency failure → toggle_feature_flag
-- Cannot auto-fix → escalate_to_human
-Use exact names from diagnostics.""",
-            tools=[restart_pod, scale_service, flush_cache, toggle_feature_flag, escalate_to_human],
-        )
-
-        result = await agent.run(
-            f"Diagnostics:\n{state.diagnostics_result}\n\n"
-            f"Service: {state.alert_service}\nExecute the fix."
-        )
-        state.remediation_result = result.text
-        print(f"\n{result.text}")
-
-    return "verification"
+def get_severity_condition(expected: str):
+    def condition(message: Any) -> bool:
+        return isinstance(message, RoutingDecision) and message.severity == expected
+    return condition
 
 
-@executor
-async def verification(ctx: WorkflowContext[IncidentState]) -> str:
-    state = ctx.state
-    print(f"\n{'='*60}\n✅ VERIFICATION\n{'='*60}")
-
-    async with (
-        AzureCliCredential() as credential,
-        AzureAIAgentClient(async_credential=credential) as client,
-    ):
-        agent = client.create_agent(
-            name="VerificationAgent",
-            instructions="""You are a Verification Agent. Check if the fix worked.
-1. get_health_status for service health
-2. run_smoke_test for functional tests
-End with: VERDICT: RESOLVED or VERDICT: FAILED""",
-            tools=[get_health_status, run_smoke_test],
-        )
-
-        result = await agent.run(
-            f"Remediation:\n{state.remediation_result}\n\n"
-            f"Service: {state.alert_service}\nVerify the fix."
-        )
-        state.verification_result = result.text
-        print(f"\n{result.text}")
-
-        if "RESOLVED" in result.text.upper():
-            state.is_resolved = True
-            return "communications"
-        else:
-            state.retry_count += 1
-            if state.retry_count >= state.max_retries:
-                return "communications"
-            return "remediation"
+@executor(id="to_diagnostics")
+async def to_diagnostics(routing: RoutingDecision, ctx: WorkflowContext[AgentExecutorRequest]) -> None:
+    triage: TriageResult = ctx.get_state("triage_result")
+    service = ctx.get_state("service")
+    user_msg = Message("user", contents=[
+        f"Investigate incident:\nService: {service}\n"
+        f"Hypothesis: {triage.root_cause_hypothesis}\n"
+        f"Investigate: {triage.recommended_action}"
+    ])
+    await ctx.send_message(AgentExecutorRequest(messages=[user_msg], should_respond=True))
 
 
-@executor
-async def communications(ctx: WorkflowContext[IncidentState]) -> None:
-    state = ctx.state
-    print(f"\n{'='*60}\n📢 COMMUNICATIONS\n{'='*60}")
-
-    async with (
-        AzureCliCredential() as credential,
-        AzureAIAgentClient(async_credential=credential) as client,
-    ):
-        agent = client.create_agent(
-            name="CommsAgent",
-            instructions="""You are the Communications Agent.
-1. Post summary to Slack #incidents
-2. Create incident ticket
-3. Update status page to 'operational' if resolved
-Keep Slack message brief.""",
-            tools=[post_to_slack, create_incident_ticket, update_status_page],
-        )
-
-        status = "RESOLVED" if state.is_resolved else "ESCALATED"
-        result = await agent.run(
-            f"Status: {status}\n"
-            f"Service: {state.alert_service}\n"
-            f"Triage: {state.triage_result[:200]}\n"
-            f"Diagnostics: {state.diagnostics_result[:200]}\n"
-            f"Remediation: {state.remediation_result[:200]}\n"
-            f"Notify the team."
-        )
-        state.comms_result = result.text
-        print(f"\n{result.text}")
+@executor(id="monitor_only")
+async def monitor_only(routing: RoutingDecision, ctx: WorkflowContext[Never, str]) -> None:
+    alert = ctx.get_state("alert")
+    await ctx.yield_output(
+        f"LOW severity: {alert['title']} — monitoring only, no remediation required."
+    )
 
 
-async def main():
-    # Build workflow
-    workflow = (
-        WorkflowBuilder[IncidentState]()
-        .add_executor(triage, name="triage")
-        .add_executor(diagnostics, name="diagnostics")
-        .add_executor(remediation, name="remediation")
-        .add_executor(verification, name="verification")
-        .add_executor(communications, name="communications")
+@executor(id="comms")
+async def comms(response: AgentExecutorResponse, ctx: WorkflowContext[Never, str]) -> None:
+    diag = DiagnosticsResult.model_validate_json(response.agent_response.text)
+    service = ctx.get_state("service")
+    triage: TriageResult = ctx.get_state("triage_result")
+    ctx.set_state("diagnostics_result", diag)
+    report = (
+        f"\U0001f6a8 INCIDENT RESPONSE REPORT\n"
+        f"{'='*40}\n"
+        f"Service: {service}\n"
+        f"Severity: {triage.severity.upper()}\n"
+        f"Root Cause: {diag.root_cause}\n"
+        f"Confidence: {diag.confidence:.0%}\n"
+        f"Affected: {', '.join(diag.affected_components)}\n"
+        f"Recommended Fix: {diag.recommended_fix}\n"
+        f"Requires Restart: {diag.requires_restart}\n"
+    )
+    await ctx.yield_output(report)
+
+
+# =============================================================================
+# BUILD & RUN
+# =============================================================================
+
+
+def build_workflow():
+    triage_agent_executor = AgentExecutor(create_triage_agent())
+    diagnostics_agent_executor = AgentExecutor(create_diagnostics_agent())
+
+    return (
+        WorkflowBuilder(start_executor=ingest_alert)
+        .add_edge(ingest_alert, triage_agent_executor)
+        .add_edge(triage_agent_executor, parse_triage)
+        .add_switch_case_edge_group(parse_triage, [
+            Case(condition=get_severity_condition("critical"), target=to_diagnostics),
+            Case(condition=get_severity_condition("high"), target=to_diagnostics),
+            Default(target=monitor_only),
+        ])
+        .add_edge(to_diagnostics, diagnostics_agent_executor)
+        .add_edge(diagnostics_agent_executor, comms)
         .build()
     )
 
-    # Load incident
-    with open(Path(__file__).parent.parent / "data" / "incidents.json") as f:
+
+async def main():
+    with open("data/incidents.json") as f:
         incidents = json.load(f)
 
-    alert = incidents[0]
-    print(f"🚨 INCIDENT RESPONSE: {alert['title']}")
+    workflow = build_workflow()
 
-    state = IncidentState(
-        alert_title=alert["title"],
-        alert_service=alert["service"],
-        alert_severity=alert["severity"],
-        alert_description=alert["description"],
-    )
+    # Run each incident through the workflow
+    for incident in incidents:
+        print(f"\n{'='*60}")
+        print(f"Processing: {incident['title']}")
+        print(f"{'='*60}\n")
 
-    final = await workflow.run(state=state)
+        events = await workflow.run(json.dumps(incident))
+        outputs = events.get_outputs()
 
-    print(f"\n\n{'='*60}")
-    print(f"🏁 DONE — Resolved: {'✅' if final.is_resolved else '❌'}")
+        if outputs:
+            print(outputs[0])
+        else:
+            print("No output produced")
 
 
 if __name__ == "__main__":
