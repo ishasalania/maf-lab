@@ -1,0 +1,32 @@
+[
+  {
+    "id": "alert-001",
+    "title": "High Latency on payment-api",
+    "service": "payment-api",
+    "severity": "high",
+    "triggered_at": "2026-06-29T02:41:00Z",
+    "description": "p95 latency for payment-api has exceeded 2000ms threshold for 5 minutes. Current p95: 2340ms. Customers are experiencing slow checkouts.",
+    "alert_source": "Prometheus/AlertManager",
+    "expected_resolution": "Restart pod-3 (OOM memory leak) and verify latency drops back to normal"
+  },
+  {
+    "id": "alert-002",
+    "title": "Error Rate Spike on order-service",
+    "service": "order-service",
+    "severity": "critical",
+    "triggered_at": "2026-06-29T02:42:00Z",
+    "description": "5xx error rate for order-service has spiked to 12.4% (threshold: 5%). Orders are failing to process. This appears to be a cascading failure from an upstream dependency.",
+    "alert_source": "Prometheus/AlertManager",
+    "expected_resolution": "Root cause is payment-api degradation. Fixing payment-api should resolve cascading failures."
+  },
+  {
+    "id": "alert-003",
+    "title": "Email Delivery Failures on notification-service",
+    "service": "notification-service",
+    "severity": "medium",
+    "triggered_at": "2026-06-29T02:38:00Z",
+    "description": "Email delivery success rate has dropped to 33%. Primary email provider is returning HTTP 429 (rate limited). 2,340 messages in queue pending delivery.",
+    "alert_source": "Custom/QueueMonitor",
+    "expected_resolution": "Toggle feature flag 'use_backup_email' to enable backup email provider"
+  }
+]
