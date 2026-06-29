@@ -1,16 +1,18 @@
 # Building Multi-Agent AI Systems with MAF
-## From Copilot to Orchestrated Agents
 
-**WeAreDevelopers World Congress 2026 — Berlin**
-Friday 10 July | 12:15–14:15 | Room Ulm
+> **From Copilot to Orchestrated Agents** — Build an autonomous multi-agent incident response system using Microsoft Agent Framework and Azure AI Foundry.
 
-Isha Salania · Kiran Panchal · Ricardo Niepel
+**WeAreDevelopers World Congress 2026** — Berlin, Friday 10 July | 12:15–14:15 | Room Ulm
+
+*Isha Salania · Kiran Panchal · Ricardo Niepel*
 
 ---
 
-## What You'll Build
+## Overview
 
-An autonomous **multi-agent incident response system** that handles production alerts while you sleep.
+In this hands-on workshop, you'll build a production-grade **multi-agent incident response system** that handles production alerts autonomously — triaging, diagnosing, fixing, verifying, and communicating — all without human intervention.
+
+You'll start by seeing why a single "copilot" agent fails at complex operations, then progressively build specialized agents, wire them into orchestrated workflows, and add memory so the system learns from past incidents.
 
 ```
 ┌──────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐    ┌───────┐
@@ -22,53 +24,44 @@ An autonomous **multi-agent incident response system** that handles production a
                                          └──────────────────┘
 ```
 
-5 specialized agents • 15 infrastructure tools • Conditional routing • Incident memory
+**5 specialized agents · 15 infrastructure tools · Conditional routing · Incident memory**
 
 ---
 
-## Workshop Flow (2 hours)
+## Learning Objectives
 
-| Time | Step | What You Do |
-|------|------|-------------|
-| 12:15–12:30 | **Setup** | Clone, install, verify Azure connection |
-| 12:30–12:50 | **Step 1** | Run a single "copilot" agent — see why it fails |
-| 12:50–13:15 | **Step 2** | Build 5 specialized agents with real tools |
-| 13:15–13:40 | **Step 3** | Wire them into an automated workflow with routing |
-| 13:40–13:55 | **Step 4** | Add memory so the system learns from past incidents |
-| 13:55–14:15 | **Experiment** | Try different incidents, see different agent decisions |
+By the end of this workshop, you will be able to:
+
+1. **Explain** why single-agent architectures fail for complex operational tasks
+2. **Design** multi-agent systems with task decomposition and tool integration
+3. **Build** agents using Microsoft Agent Framework (MAF) with Azure AI Foundry
+4. **Orchestrate** agent workflows with conditional routing and shared state
+5. **Implement** memory patterns that make agent systems improve over time
 
 ---
 
 ## Prerequisites
 
-- Python 3.10+
-- Azure CLI installed (`az login` working)
-- An Azure AI Foundry project with a GPT-4o deployment
+| Requirement | Details |
+|---|---|
+| **Azure subscription** | With permissions to create AI Foundry resources |
+| **Python** | 3.10 or higher |
+| **Azure CLI** | Installed and `az login` working |
+| **GitHub account** | For Codespaces (recommended) or forking the repo |
+
+> **No prior AI/ML experience required.** If you've written Python functions and used APIs, you're ready.
 
 ---
 
-## Quick Start
+## Challenges
 
-```bash
-# 1. Clone
-git clone https://github.com/ishasalania/maf-lab.git
-cd maf-lab
-
-# 2. Create virtual environment
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS/Linux
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment
-copy .env.example .env
-# Edit .env with your Azure AI project endpoint
-
-# 5. Verify setup
-# Open 0-verify-setup.ipynb and run all cells
-```
+| Challenge | Title | Duration | Description |
+|---|---|---|---|
+| [Challenge 0](challenge-0/README.md) | Environment Setup | 15 min | Fork repo, deploy Azure resources, verify connection |
+| [Challenge 1](challenge-1/README.md) | The Single-Agent Approach | 20 min | See why a single "copilot" fails at incident response |
+| [Challenge 2](challenge-2/README.md) | Specialized Agents with Tools | 25 min | Build 5 focused agents with 15 infrastructure tools |
+| [Challenge 3](challenge-3/README.md) | Workflow Orchestration | 25 min | Wire agents into an automated pipeline with routing |
+| [Challenge 4](challenge-4/README.md) | Memory Patterns | 20 min | Add incident memory so the system learns over time |
 
 ---
 
@@ -76,27 +69,32 @@ copy .env.example .env
 
 ```
 maf-lab/
-├── 0-verify-setup.ipynb       # Verify your environment works
-├── 1-single-agent.ipynb       # The "copilot" approach (see it fail)
-├── 2-specialized-agents.ipynb # Build agents with tools (YOUR CODE HERE)
-├── 3-workflow.ipynb           # Orchestrate into a workflow (YOUR CODE HERE)
-├── 4-memory.ipynb             # Add incident memory (YOUR CODE HERE)
+├── challenge-0/               # Setup & verification
+│   ├── README.md              # Setup instructions
+│   ├── verify-setup.ipynb     # Environment check notebook
+│   └── scripts/               # Azure deployment scripts
+├── challenge-1/               # Single agent limitations
+│   ├── README.md
+│   └── challenge.ipynb
+├── challenge-2/               # Specialized agents + tools
+│   ├── README.md
+│   └── challenge.ipynb
+├── challenge-3/               # Workflow orchestration
+│   ├── README.md
+│   └── challenge.ipynb
+├── challenge-4/               # Memory patterns
+│   ├── README.md
+│   └── challenge.ipynb
 ├── tools/
 │   └── mock_infra.py          # 15 simulated infrastructure tools
 ├── data/
-│   └── incidents.json         # 3 sample incidents to process
-├── solution/                  # Complete solutions (if you get stuck)
-└── requirements.txt
+│   └── incidents.json         # 3 sample incidents
+├── solution/
+│   └── full_workflow.py       # Complete reference implementation
+├── .devcontainer/             # Codespaces configuration
+├── requirements.txt
+└── .env.example
 ```
-
----
-
-## Topics Covered
-
-- **Task Decomposition** — Splitting a complex problem into specialist agents
-- **Tool Integration** — Giving agents access to infrastructure APIs
-- **Agent Coordination** — Workflow orchestration with conditional routing
-- **Memory Patterns** — Learning from past incidents to resolve faster
 
 ---
 
@@ -112,17 +110,43 @@ It's 3 AM. An alert fires. Your multi-agent system:
 
 All without waking you up.
 
+### Sample Incidents
+
+| # | Alert | Service | Root Cause | Agent Decision |
+|---|-------|---------|-----------|----------------|
+| 1 | High Latency | payment-api | Memory leak → OOM on pod-3 | Restart pod |
+| 2 | Error Rate Spike | order-service | Cascading failure | Scale replicas |
+| 3 | Email Failures | notification-service | Provider rate limiting | Toggle feature flag |
+
+Each incident triggers **different agent decisions** — demonstrating that the workflow adapts based on what agents discover.
+
 ---
 
-## Sample Incidents Included
+## Quick Start
 
-| # | Alert | Service | Root Cause |
-|---|-------|---------|-----------|
-| 1 | High Latency | payment-api | Memory leak → OOM on pod-3 |
-| 2 | Error Rate Spike | order-service | Cascading failure from payment-api |
-| 3 | Email Failures | notification-service | Provider rate limiting |
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ishasalania/maf-lab?quickstart=1)
 
-Each incident triggers **different agent decisions** — restart vs. scale vs. feature flag.
+Or manually:
+
+```bash
+git clone https://github.com/ishasalania/maf-lab.git
+cd maf-lab
+python -m venv .venv && .venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+```
+
+Then follow [Challenge 0](challenge-0/README.md) to deploy Azure resources.
+
+---
+
+## Key Technologies
+
+| Technology | Role |
+|---|---|
+| [Microsoft Agent Framework (MAF)](https://github.com/microsoft/agent-framework) | Agent runtime, workflow orchestration, tool integration |
+| [Azure AI Foundry](https://ai.azure.com) | Model hosting (GPT-4o), project management |
+| [Azure Identity](https://learn.microsoft.com/en-us/python/api/azure-identity/) | Passwordless authentication via Azure CLI |
+| Python 3.10+ | Workshop runtime |
 
 ---
 
@@ -132,3 +156,13 @@ Each incident triggers **different agent decisions** — restart vs. scale vs. f
 > **Multi-agent systems** operate autonomously across multiple systems, make decisions, and take action.
 
 You're not building a chatbot. You're building an **autonomous operations system**.
+
+---
+
+## Contributing
+
+This workshop was created for WeAreDevelopers World Congress 2026. Issues and PRs welcome.
+
+## License
+
+MIT
