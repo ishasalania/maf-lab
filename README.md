@@ -12,7 +12,7 @@
 
 In this hands-on workshop, you'll build a production-grade **multi-agent incident response system** that handles production alerts autonomously — triaging, diagnosing, fixing, verifying, and communicating — all without human intervention.
 
-You'll start by seeing why a single "copilot" agent fails at complex operations, then progressively build specialized agents, wire them into orchestrated workflows, and add memory so the system learns from past incidents.
+You'll progressively build specialized agents, wire them into orchestrated workflows with conditional routing, and add memory so the system learns from past incidents.
 
 ```
 ┌──────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐    ┌───────┐
@@ -58,11 +58,10 @@ By the end of this workshop, you will be able to:
 | Challenge | Title | Duration | Description |
 |---|---|---|---|
 | [Challenge 0](challenge-0/README.md) | Environment Setup | 15 min | Fork repo, deploy Azure resources, verify connection |
-| [Challenge 1](challenge-1/README.md) | The Single-Agent Approach | 20 min | See why a single "copilot" fails at incident response |
-| [Challenge 2](challenge-2/README.md) | Specialized Agents with Tools | 25 min | Build 5 focused agents with 15 infrastructure tools |
-| [Challenge 3](challenge-3/README.md) | Workflow Orchestration | 25 min | Wire agents into an automated pipeline with routing |
-| [Challenge 4](challenge-4/README.md) | Memory Patterns | 20 min | Add incident memory so the system learns over time |
-| [Challenge 5](challenge-5/README.md) | Advanced Patterns (Bonus) | 20+ min | Human-in-the-loop, structured output, observability |
+| [Challenge 1](challenge-1/README.md) | Specialized Agents with Tools | 30 min | Build 5 focused agents with 15 infrastructure tools |
+| [Challenge 2](challenge-2/README.md) | Workflow Orchestration | 30 min | Wire agents into an automated pipeline with routing |
+| [Challenge 3](challenge-3/README.md) | Memory & Learning | 25 min | Add incident memory so the system learns over time |
+| [Challenge 4](challenge-4/README.md) | Advanced Patterns (Bonus) | 20+ min | Human-in-the-loop, structured output, observability |
 
 ---
 
@@ -74,19 +73,16 @@ maf-lab/
 │   ├── README.md              # Setup instructions
 │   ├── verify-setup.ipynb     # Environment check notebook
 │   └── scripts/               # Azure deployment scripts
-├── challenge-1/               # Single agent limitations
-│   ├── README.md
-│   └── challenge.ipynb
-├── challenge-2/               # Specialized agents + tools
+├── challenge-1/               # Specialized agents + tools
 │   ├── README.md
 │   └── challenge.ipynb        # 4 agents to build (1 reference provided)
-├── challenge-3/               # Workflow orchestration
+├── challenge-2/               # Workflow orchestration
 │   ├── README.md
 │   └── challenge.ipynb        # Build executors + routing logic
-├── challenge-4/               # Memory patterns
+├── challenge-3/               # Memory & learning
 │   ├── README.md
 │   └── challenge.ipynb        # Implement memory store + search
-├── challenge-5/               # Bonus: advanced patterns
+├── challenge-4/               # Bonus: advanced patterns
 │   └── README.md              # Human-in-the-loop, structured output, tracing
 ├── tools/
 │   └── mock_infra.py          # 15 simulated infrastructure tools

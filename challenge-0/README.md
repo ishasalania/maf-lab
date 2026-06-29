@@ -141,4 +141,4 @@ Open `challenge-0/verify-setup.ipynb` and run all cells. You should see:
 
 ## ➡️ Next Challenge
 
-You're all set! Head to **[Challenge 1: The Single-Agent Approach](../challenge-1/README.md)** to see why a single "copilot" agent isn't enough for real-world operations.
+You're all set! Head to **[Challenge 1: Specialized Agents with Tools](../challenge-1/README.md)** to start building your multi-agent system.

@@ -1,167 +1,176 @@
-# Challenge 4 — Memory Patterns
+# Challenge 4 — Advanced Patterns (Bonus)
 
-**Expected Duration: 20 minutes**
+**Expected Duration: 20+ minutes (stretch goal for fast teams)**
 
 ## Introduction
 
-Your workflow handles incidents autonomously — but every time, it investigates from scratch. A human SRE gets **faster** over time because they remember: "Oh, this is the same memory leak from last Tuesday."
+You've built a complete multi-agent incident response system. Now go further with production-grade patterns that make the system safer, observable, and more intelligent.
 
-In this challenge, you'll add **incident memory** so your system:
-- Recognizes recurring issues instantly
-- References past resolutions
-- Provides estimated time-to-resolve based on history
-- Gets smarter with every incident it handles
+Pick **one or more** of the challenges below — they're independent.
 
 ---
 
-## What You're Building
+## Option A: Human-in-the-Loop Approval Gate
 
-```
-Alert fires
-    │
-    ▼
-┌─────────────────────┐
-│ Memory Provider      │ ◄── Searches past incidents
-│ "This matches INC-  │     Returns: root cause, resolution, TTR
-│  from 2 days ago"   │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│ Triage Agent         │  Now KNOWS this is recurring
-│ (enhanced with       │  Skips unnecessary investigation
-│  memory context)     │  Fast-tracks to known-good fix
-└─────────────────────┘
-          │
-          ▼
-    [Rest of workflow — faster because diagnosis is already known]
+**Problem**: The remediation agent can restart pods and toggle flags autonomously. In production, some actions (like scaling to 10x replicas, or toggling a billing flag) need human approval.
+
+**Your Task**: Add an approval gate before destructive actions.
+
+### Requirements
+1. Create a `requires_approval(action, severity)` function that returns `True` for high-risk actions
+2. Modify the remediation executor to pause and ask for confirmation when approval is needed
+3. If denied, route to `escalate_to_human` instead
+
+### Starter Code
+```python
+def requires_approval(action: str, service: str) -> bool:
+    """Returns True if this action needs human approval."""
+    HIGH_RISK_SERVICES = ["payment-api", "auth-service"]
+    HIGH_RISK_ACTIONS = ["scale_service", "toggle_feature_flag"]
+    
+    # TODO: Your logic here
+    # Hint: restart is usually safe, but scaling payment-api might not be
+    pass
 ```
 
----
-
-## Tasks
-
-Open `challenge-4/challenge.ipynb` and complete the following:
-
-### Task 1: Build an Incident Memory Store
-
-Create an `IncidentMemoryStore` class that:
-- Holds past incident resolutions (pre-seeded with 4 examples)
-- Has a `search(service, keywords)` method to find relevant matches
-- Has a `store(memory)` method to save new resolutions
-
-### Task 2: Create a Memory Tool
-
-Wrap the memory store as a callable tool function `search_incident_memory(service_name, keywords)` that agents can invoke.
-
-### Task 3: Build a Memory-Enhanced Triage Agent
-
-Create a triage agent with 3 tools:
-1. `search_incident_memory` — check past incidents FIRST
-2. `check_alert_history` — recent alert patterns
-3. `get_runbook` — standard procedures
-
-Observe how it immediately says: "This matches a past incident from 2 days ago — resolution was restarting pod-3."
-
-### Task 4: Store New Resolutions
-
-After the workflow resolves an incident, store the resolution in memory so the next occurrence benefits.
+### Success Criteria
+- [ ] `restart_pod` on non-critical services proceeds automatically
+- [ ] `scale_service` on payment-api triggers approval prompt
+- [ ] Denied actions route to `escalate_to_human`
 
 ---
 
-## Compare: Before vs. After Memory
+## Option B: Structured Output Parsing
 
-| Without Memory (Challenge 2) | With Memory (Challenge 4) |
-|---|---|
-| Investigates from scratch every time | Immediately recognizes recurring issue |
-| Triage takes full investigation | Fast-tracks with known pattern |
-| No historical TTR estimate | "Expected resolution: 6-8 minutes" |
-| No link to related tickets | "Related: JIRA-4521" |
-| Remediation may try wrong fix first | Jumps to known-good fix |
+**Problem**: Agents return free-form text. Parsing "VERDICT: RESOLVED" with string matching is fragile. What if the agent says "partially resolved" or "Resolution confirmed"?
 
----
+**Your Task**: Use structured output to get reliable, parseable responses.
 
-## Production Patterns
+### Requirements
+1. Define a Pydantic model for each agent's output
+2. Use `response_format` parameter to force structured JSON responses
+3. Parse the output directly into your model
 
-In a real system, you'd enhance this with:
+### Starter Code
+```python
+from pydantic import BaseModel, Field
 
-| Pattern | Implementation |
-|---------|---------------|
-| **Semantic search** | Azure AI Search with embeddings for fuzzy matching |
-| **Confidence decay** | Recent resolutions weighted higher than old ones |
-| **Human feedback loop** | SREs mark if suggested resolution was helpful |
-| **Cross-service correlation** | "When payment-api goes down, order-service follows" |
-| **Automated runbook updates** | Memory feeds back into runbook maintenance |
+class TriageOutput(BaseModel):
+    severity: str = Field(description="critical, high, medium, or low")
+    is_recurring: bool = Field(description="Whether this alert has fired before")
+    auto_remediation_allowed: bool
+    recommended_action: str
+    incident_type: str = Field(description="For runbook lookup, e.g., high_latency")
 
----
-
-## Hints
-
-<details>
-<summary>💡 Hint: Pre-seeded memories</summary>
-
-The memory store includes 4 past incidents:
-1. payment-api memory leak (2 days ago) — restart pod-3
-2. payment-api connection pool exhaustion (4 days ago) — restart + increase pool
-3. notification-service rate limiting (yesterday) — toggle backup email
-4. user-service cert expiry (24 days ago) — manual fix by security team
-
-When you search for "payment-api", it should find incidents #1 and #2.
-</details>
-
-<details>
-<summary>💡 Hint: The learning loop</summary>
-
-After storing a new resolution, the next time the same alert fires, `search_incident_memory` will return it. The agent sees: "This happened 3 times now, same root cause, same fix." This is how the system gets progressively smarter.
-</details>
-
----
-
-## Success Criteria
-
-- [ ] Memory-enhanced triage agent finds past incidents for payment-api
-- [ ] Agent references the previous resolution in its output
-- [ ] New incident resolution is stored in memory after completion
-- [ ] System would handle the SAME alert faster the second time
-
----
-
-## 🎉 Workshop Complete!
-
-Congratulations! You've built a production-grade multi-agent incident response system.
-
-### What You Achieved
-
-| Challenge | Concept | What You Built |
-|-----------|---------|----------------|
-| 0 | Setup | Azure AI Foundry connection |
-| 1 | Motivation | Saw why single agents fail |
-| 2 | Task Decomposition + Tools | 5 specialized agents with 15 tools |
-| 3 | Agent Coordination | Automated workflow with conditional routing |
-| 4 | Memory Patterns | Learning system that improves over time |
-
-### The Journey: Copilot → Orchestrated Agents
-
-```
-Single Agent          →  Specialized Agents  →  Workflow          →  Memory
-(generic advice)         (real tools)            (autonomous)         (learns)
+class VerificationOutput(BaseModel):
+    health_status: str
+    smoke_test_results: list[str]
+    verdict: str = Field(description="RESOLVED or FAILED")
+    confidence: float = Field(description="0.0 to 1.0")
 ```
 
-### Next Steps (After the Workshop)
+### Success Criteria
+- [ ] Triage returns parseable JSON matching `TriageOutput`
+- [ ] Verification verdict is a clean enum, not free text
+- [ ] Routing logic uses `output.verdict == "RESOLVED"` instead of string search
 
-| Topic | What to explore |
-|-------|-----------------|
-| **Human-in-the-loop** | Add approval gates before destructive actions |
-| **Structured outputs** | Use Pydantic models for reliable agent responses |
-| **MCP integration** | Connect to real Prometheus/PagerDuty via MCP protocol |
-| **Observability** | Add OpenTelemetry tracing to monitor agent decisions |
-| **Evaluation** | Red-team test with adversarial incident scenarios |
+---
 
-> **Still have time?** Head to **[Challenge 5: Advanced Patterns (Bonus)](../challenge-5/README.md)** for stretch goals!
+## Option C: Observability with OpenTelemetry
 
-### Resources
+**Problem**: When the workflow runs at 3 AM, you need to see what happened — which tools were called, how long each stage took, what the agents decided.
 
-- [Microsoft Agent Framework Docs](https://learn.microsoft.com/en-us/agent-framework/)
-- [Agent Framework GitHub](https://github.com/microsoft/agent-framework)
-- [Azure AI Foundry](https://ai.azure.com)
-- This workshop: [github.com/ishasalania/maf-lab](https://github.com/ishasalania/maf-lab)
+**Your Task**: Add tracing spans to each executor.
+
+### Requirements
+1. Create a span per executor with attributes (service, stage, duration)
+2. Log tool calls as child spans
+3. Record the final verdict and resolution time
+
+### Starter Code
+```python
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor
+
+# Setup
+provider = TracerProvider()
+provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+trace.set_tracer_provider(provider)
+tracer = trace.get_tracer("incident-response")
+
+@executor
+async def triage_executor(ctx: WorkflowContext[IncidentState]) -> str:
+    with tracer.start_as_current_span("triage") as span:
+        span.set_attribute("service", ctx.state.alert_service)
+        span.set_attribute("severity", ctx.state.alert_severity)
+        # ... your existing code ...
+        span.set_attribute("result_length", len(ctx.state.triage_result))
+    return "diagnostics"
+```
+
+### Success Criteria
+- [ ] Console shows trace spans for each workflow stage
+- [ ] Each span has service name, duration, and result summary
+- [ ] You can identify which stage took longest
+
+---
+
+## Option D: Multi-Incident Parallel Processing
+
+**Problem**: Three alerts fire simultaneously. The current workflow handles them sequentially. Can you process multiple incidents in parallel?
+
+**Your Task**: Run the workflow on all 3 incidents concurrently.
+
+### Requirements
+1. Use `asyncio.gather` to run 3 workflow instances in parallel
+2. Each instance has its own `IncidentState`
+3. Show a summary table of all 3 resolutions
+
+### Starter Code
+```python
+import asyncio
+
+async def handle_all_incidents():
+    states = [
+        IncidentState(
+            alert_title=inc["title"],
+            alert_service=inc["service"],
+            alert_severity=inc["severity"],
+            alert_description=inc["description"],
+        )
+        for inc in incidents
+    ]
+    
+    results = await asyncio.gather(*[
+        workflow.run(state=state) for state in states
+    ])
+    
+    # Print summary table
+    print(f"\n{'Service':<25} {'Resolved':<10} {'Retries':<10}")
+    print("-" * 45)
+    for result in results:
+        print(f"{result.alert_service:<25} {'✅' if result.is_resolved else '❌':<10} {result.retry_count:<10}")
+```
+
+### Success Criteria
+- [ ] All 3 incidents processed (not just 1)
+- [ ] Each resolved with different actions
+- [ ] Total time less than 3x single-incident time (proves parallelism)
+
+---
+
+## Learning Resources
+
+| Topic | Link |
+|-------|------|
+| Human-in-the-loop patterns | [MAF Middleware docs](https://github.com/microsoft/agent-framework) |
+| Structured outputs | [OpenAI Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs) |
+| OpenTelemetry Python | [OTel Python SDK](https://opentelemetry.io/docs/languages/python/) |
+| Async patterns | [Python asyncio docs](https://docs.python.org/3/library/asyncio.html) |
+
+---
+
+## 🎉 You've Gone Beyond the Workshop!
+
+These patterns separate toy demos from production systems. If you implemented any of these, you understand multi-agent engineering at a professional level.

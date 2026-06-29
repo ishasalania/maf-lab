@@ -1,81 +1,108 @@
-# Challenge 1 — The Single-Agent Approach (Why It Fails)
+# Challenge 1 — Specialized Agents with Tools
 
-**Expected Duration: 20 minutes**
+**Expected Duration: 30 minutes**
 
 ## Introduction
 
-In this challenge, you'll experience firsthand why a single "copilot" agent can't handle complex operational tasks. You'll send a real production alert to a generic agent and observe its limitations — setting the stage for **why** multi-agent systems exist.
+Now you'll build what the single agent couldn't do — **five specialized agents**, each owning specific infrastructure tools. This is the core of multi-agent design: **task decomposition** + **tool integration**.
+
+Instead of one confused agent, you'll have experts:
+
+| Agent | Role | Tools |
+|-------|------|-------|
+| **Triage Agent** | First responder — classify, check history, find runbook | `check_alert_history`, `get_runbook` |
+| **Diagnostics Agent** | Investigator — find root cause with evidence | `get_metrics`, `get_logs`, `check_dependencies` |
+| **Remediation Agent** | Operator — execute the fix | `restart_pod`, `scale_service`, `flush_cache`, `toggle_feature_flag` |
+| **Verification Agent** | QA — confirm the fix worked | `get_health_status`, `run_smoke_test` |
+| **Communications Agent** | Reporter — notify team, create tickets | `post_to_slack`, `create_incident_ticket`, `update_status_page` |
 
 ---
 
-## The Scenario
-
-It's 2:41 AM. This alert just fired in your monitoring system:
+## What You're Building
 
 ```
-🔴 ALERT: High Latency on payment-api
-   p95 latency: 2340ms (threshold: 2000ms)
-   Duration: 5 minutes
-   Impact: Customers experiencing slow checkouts
+Alert ──► Triage ──► Diagnostics ──► Remediation ──► Verification ──► Comms
+          (2 tools)   (3 tools)       (5 tools)       (2 tools)        (3 tools)
 ```
 
-Your job: handle this incident end-to-end — triage, diagnose, fix, verify, and notify the team.
+Each agent:
+- Has a **focused responsibility** (easier to prompt correctly)
+- Owns **specific tools** (can't misuse tools meant for other tasks)
+- Produces **structured output** for the next agent
+- Is **testable in isolation** (you can run any agent alone)
 
 ---
 
-## What You'll Observe
+## Tasks
 
-A single agent without tools will:
-- **Guess** instead of checking real metrics
-- **Suggest** instead of taking action
-- **Generic advice** regardless of the specific incident
-- **No verification** that anything actually worked
-- **No memory** of past incidents
+Open `challenge-1/challenge.ipynb` and complete the following:
+
+### Task 1: Build the Triage Agent
+Write the agent instructions and run it on the alert. It should:
+- Call `check_alert_history` to see if this is recurring
+- Call `get_runbook` to find the playbook
+- Output: severity, recurring status, recommended next steps
+
+### Task 2: Build the Diagnostics Agent
+Write instructions that make it systematically gather evidence:
+- Call `get_metrics` → What are CPU/memory/latency numbers?
+- Call `get_logs` → What errors are appearing?
+- Call `check_dependencies` → Are upstream/downstream services affected?
+- Output: specific root cause with evidence
+
+### Task 3: Build the Remediation Agent
+This agent has the "dangerous" tools. Its instructions must:
+- ONLY act based on diagnostics findings
+- Use exact pod/service names from the diagnostics
+- Call `escalate_to_human` if auto-fix isn't allowed
+
+### Task 4: Build the Verification Agent
+Confirm the fix worked:
+- Call `get_health_status` for service health
+- Call `run_smoke_test` for functional tests
+- Verdict: RESOLVED or NEEDS_ESCALATION
+
+### Task 5: Build the Communications Agent
+Handle all notifications:
+- Post to Slack with brief summary
+- Create an incident ticket with full details
+- Update the status page
 
 ---
 
-## Task
+## Hints
 
-Open `challenge-1/challenge.ipynb` and run all cells.
+<details>
+<summary>💡 Hint: Writing good agent instructions</summary>
 
-1. Read the alert that fires
-2. Run the single "copilot" agent
-3. Read its response carefully
-4. Answer: What's wrong with this response?
+The key to good agent instructions:
+1. State the role clearly ("You are a Triage Agent")
+2. List the tools and when to use each one
+3. Specify the output format you expect
+4. Add constraints ("Do NOT guess — only use data from your tools")
+</details>
 
----
+<details>
+<summary>💡 Hint: What the Diagnostics Agent should find</summary>
 
-## Discussion Questions
+Look at what `get_metrics("payment-api")` returns — you'll see pod-3 has memory at 3891MB (limit 4096MB) and 4 restarts. The logs show OOMKilled errors. This tells you exactly which pod to restart.
+</details>
 
-After running the notebook, consider:
+<details>
+<summary>💡 Hint: Remediation Agent safety</summary>
 
-| Question | What you should notice |
-|----------|----------------------|
-| Does the agent know the actual CPU/memory usage? | No — it guesses |
-| Can it restart a pod? | No — it can only suggest |
-| Does it know this happened before? | No — no memory |
-| How would you verify the fix worked? | You can't — no tools |
-| Would you trust this at 3 AM without human oversight? | Absolutely not |
-
----
-
-## Key Concept: Why Multi-Agent?
-
-| Single Agent (Copilot) | Multi-Agent System |
-|---|---|
-| One prompt, one context window | Specialized experts per task |
-| No tools | Each agent owns specific tools |
-| No orchestration | Workflow with routing and retries |
-| No memory | Learns from past incidents |
-| Generic advice | Takes concrete action |
+The runbook for "high_latency" has `auto_remediation_allowed: true`, so the agent CAN act. But for "certificate_expiry" incidents, it's `false` — the agent should escalate instead.
+</details>
 
 ---
 
 ## Success Criteria
 
-- [ ] You ran the single agent and got a response
-- [ ] You can articulate 3 things wrong with the response
-- [ ] You understand why tools + specialization + orchestration are needed
+- [ ] Each agent calls its tools (not just generating text)
+- [ ] Diagnostics agent identifies pod-3 OOM as root cause
+- [ ] Remediation agent restarts the specific pod (not just "a pod")
+- [ ] Verification agent confirms the fix worked
+- [ ] Communications agent posts to Slack AND creates a ticket
 
 ---
 
@@ -83,12 +110,12 @@ After running the notebook, consider:
 
 | Topic | Link |
 |-------|------|
-| Microsoft Agent Framework | [github.com/microsoft/agent-framework](https://github.com/microsoft/agent-framework) |
-| Why multi-agent? | [Multi-agent design patterns](https://learn.microsoft.com/en-us/azure/ai-services/agents/concepts/multi-agent) |
-| Task decomposition | [Agentic AI design patterns](https://www.deeplearning.ai/the-batch/agentic-design-patterns-part-2-reflection/) |
+| MAF Tool Integration | [Agent Framework tools docs](https://github.com/microsoft/agent-framework) |
+| Prompt engineering for agents | [System message best practices](https://learn.microsoft.com/en-us/azure/ai-services/openai/concepts/system-message) |
+| Function calling | [OpenAI function calling](https://platform.openai.com/docs/guides/function-calling) |
 
 ---
 
 ## ➡️ Next Challenge
 
-Ready to build something better? Head to **[Challenge 2: Specialized Agents with Tools](../challenge-2/README.md)** where you'll create 5 focused agents that can actually do things.
+You're manually passing outputs between agents. What if verification fails? What if you want this to run unattended? Head to **[Challenge 2: Workflow Orchestration](../challenge-2/README.md)** to automate the pipeline.

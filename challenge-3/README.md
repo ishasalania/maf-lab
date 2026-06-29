@@ -1,35 +1,41 @@
-# Challenge 3 — Workflow Orchestration
+# Challenge 3 — Memory & Learning
 
 **Expected Duration: 25 minutes**
 
 ## Introduction
 
-In Challenge 2, you built 5 great agents — but you're manually copying outputs between them. That's fine for testing, but useless at 3 AM when nobody's awake.
+Your workflow handles incidents autonomously — but every time, it investigates from scratch. A human SRE gets **faster** over time because they remember: "Oh, this is the same memory leak from last Tuesday."
 
-Now you'll wire them into a **MAF Workflow** — an automated pipeline that:
-- Chains agents together with typed state
-- Routes conditionally (fix worked → notify, fix failed → retry)
-- Runs end-to-end with a single call
-- Handles the same incident differently based on what the agents discover
+In this challenge, you'll add **incident memory** so your system:
+- Recognizes recurring issues instantly
+- References past resolutions
+- Provides estimated time-to-resolve based on history
+- Gets smarter with every incident it handles
 
 ---
 
 ## What You're Building
 
 ```
-┌──────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────┐    ┌───────┐
-│  Triage  │───►│ Diagnostics  │───►│ Remediation │───►│  Verify  │───►│ Comms │
-└──────────┘    └──────────────┘    └─────────────┘    └────┬─────┘    └───────┘
-                                           ▲                │
-                                           │    FAIL        │
-                                           └────────────────┘
+Alert fires
+    │
+    ▼
+┌─────────────────────┐
+│ Memory Provider      │ ◄── Searches past incidents
+│ "This matches INC-  │     Returns: root cause, resolution, TTR
+│  from 2 days ago"   │
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│ Triage Agent         │  Now KNOWS this is recurring
+│ (enhanced with       │  Skips unnecessary investigation
+│  memory context)     │  Fast-tracks to known-good fix
+└─────────────────────┘
+          │
+          ▼
+    [Rest of workflow — faster because diagnosis is already known]
 ```
-
-Key concepts:
-- **Executors**: Each agent wrapped as a workflow step
-- **Shared State**: A `dataclass` that holds the full incident context as it flows through
-- **Edges**: Return values from executors determine the next step (routing)
-- **Retry Logic**: Verification can loop back to remediation if the fix didn't work
 
 ---
 
@@ -37,97 +43,125 @@ Key concepts:
 
 Open `challenge-3/challenge.ipynb` and complete the following:
 
-### Task 1: Define Shared State
+### Task 1: Build an Incident Memory Store
 
-Create an `IncidentState` dataclass that holds:
-- Alert info (title, service, severity, description)
-- Results from each stage
-- Control flow flags (is_resolved, retry_count)
+Create an `IncidentMemoryStore` class that:
+- Holds past incident resolutions (pre-seeded with 4 examples)
+- Has a `search(service, keywords)` method to find relevant matches
+- Has a `store(memory)` method to save new resolutions
 
-### Task 2: Create Workflow Executors
+### Task 2: Create a Memory Tool
 
-Wrap each agent into an `@executor` function that:
-- Reads from shared state
-- Creates and runs the agent
-- Stores the result back in state
-- Returns the name of the next step
+Wrap the memory store as a callable tool function `search_incident_memory(service_name, keywords)` that agents can invoke.
 
-### Task 3: Add Conditional Routing
+### Task 3: Build a Memory-Enhanced Triage Agent
 
-The verification executor should:
-- Return `"communications"` if the fix worked (RESOLVED)
-- Return `"remediation"` if the fix failed (FAILED) and retries remain
-- Return `"communications"` if max retries exceeded (escalate)
+Create a triage agent with 3 tools:
+1. `search_incident_memory` — check past incidents FIRST
+2. `check_alert_history` — recent alert patterns
+3. `get_runbook` — standard procedures
 
-### Task 4: Build and Run the Workflow
+Observe how it immediately says: "This matches a past incident from 2 days ago — resolution was restarting pod-3."
 
-Use `WorkflowBuilder` to wire all executors together and run the full pipeline on the payment-api alert.
+### Task 4: Store New Resolutions
 
-### Task 5: Try a Different Incident
-
-Run the same workflow on incident #3 (notification-service email failures). Observe how the agents make **completely different decisions** — toggling a feature flag instead of restarting a pod.
+After the workflow resolves an incident, store the resolution in memory so the next occurrence benefits.
 
 ---
 
-## Key Concepts
+## Compare: Before vs. After Memory
 
-| Concept | What it means |
-|---------|--------------|
-| `@executor` | Decorator marking a function as a workflow step |
-| `WorkflowContext[State]` | Provides access to shared state within an executor |
-| Return value | The name of the next executor to run (routing) |
-| `Return None` | Signals the workflow is complete (terminal step) |
-| Shared state dataclass | Type-safe container for data flowing through the pipeline |
+| Without Memory (Challenge 1) | With Memory (Challenge 3) |
+|---|---|
+| Investigates from scratch every time | Immediately recognizes recurring issue |
+| Triage takes full investigation | Fast-tracks with known pattern |
+| No historical TTR estimate | "Expected resolution: 6-8 minutes" |
+| No link to related tickets | "Related: JIRA-4521" |
+| Remediation may try wrong fix first | Jumps to known-good fix |
+
+---
+
+## Production Patterns
+
+In a real system, you'd enhance this with:
+
+| Pattern | Implementation |
+|---------|---------------|
+| **Semantic search** | Azure AI Search with embeddings for fuzzy matching |
+| **Confidence decay** | Recent resolutions weighted higher than old ones |
+| **Human feedback loop** | SREs mark if suggested resolution was helpful |
+| **Cross-service correlation** | "When payment-api goes down, order-service follows" |
+| **Automated runbook updates** | Memory feeds back into runbook maintenance |
 
 ---
 
 ## Hints
 
 <details>
-<summary>💡 Hint: How routing works</summary>
+<summary>💡 Hint: Pre-seeded memories</summary>
 
-Each executor returns a string — the name of the next step. This is how you implement conditional routing:
+The memory store includes 4 past incidents:
+1. payment-api memory leak (2 days ago) — restart pod-3
+2. payment-api connection pool exhaustion (4 days ago) — restart + increase pool
+3. notification-service rate limiting (yesterday) — toggle backup email
+4. user-service cert expiry (24 days ago) — manual fix by security team
 
-```python
-@executor
-async def verification_executor(ctx: WorkflowContext[IncidentState]) -> str:
-    # ... run agent, check result ...
-    if "RESOLVED" in result.text.upper():
-        return "communications"  # Success path
-    else:
-        return "remediation"     # Retry path
-```
+When you search for "payment-api", it should find incidents #1 and #2.
 </details>
 
 <details>
-<summary>💡 Hint: Incident #3 should toggle a feature flag</summary>
+<summary>💡 Hint: The learning loop</summary>
 
-When you run the notification-service incident, the diagnostics will show the email provider is rate-limited and the backup provider feature flag is OFF. The remediation agent should call `toggle_feature_flag("use_backup_email", True)` instead of restarting anything.
+After storing a new resolution, the next time the same alert fires, `search_incident_memory` will return it. The agent sees: "This happened 3 times now, same root cause, same fix." This is how the system gets progressively smarter.
 </details>
 
 ---
 
 ## Success Criteria
 
-- [ ] Workflow runs end-to-end with one call (`workflow.run(state=...)`)
-- [ ] Payment-api incident: agent restarts pod-3 and verifies
-- [ ] Notification-service incident: agent toggles feature flag
-- [ ] Verification routes correctly (resolved → comms)
-- [ ] Final state shows `is_resolved=True`
+- [ ] Memory-enhanced triage agent finds past incidents for payment-api
+- [ ] Agent references the previous resolution in its output
+- [ ] New incident resolution is stored in memory after completion
+- [ ] System would handle the SAME alert faster the second time
 
 ---
 
-## Learning Resources
+## 🎉 Workshop Complete!
 
-| Topic | Link |
-|-------|------|
-| MAF WorkflowBuilder | [Agent Framework workflows](https://github.com/microsoft/agent-framework) |
-| Orchestration patterns | [Multi-agent orchestration](https://learn.microsoft.com/en-us/azure/ai-services/agents/concepts/multi-agent) |
-| State machines | [Finite-state machine (Wikipedia)](https://en.wikipedia.org/wiki/Finite-state_machine) |
-| Saga pattern | [Microservices saga pattern](https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/saga/saga) |
+Congratulations! You've built a production-grade multi-agent incident response system.
 
----
+### What You Achieved
 
-## ➡️ Next Challenge
+| Challenge | Concept | What You Built |
+|-----------|---------|----------------|
+| 0 | Setup | Azure AI Foundry connection |
+| 1 | Motivation | Saw why single agents fail |
+| 2 | Task Decomposition + Tools | 5 specialized agents with 15 tools |
+| 3 | Agent Coordination | Automated workflow with conditional routing |
+| 4 | Memory Patterns | Learning system that improves over time |
 
-The workflow handles incidents — but starts from scratch every time. A human SRE gets faster because they remember past incidents. Head to **[Challenge 4: Memory Patterns](../challenge-4/README.md)** to make your system learn.
+### The Journey: Copilot → Orchestrated Agents
+
+```
+Single Agent          →  Specialized Agents  →  Workflow          →  Memory
+(generic advice)         (real tools)            (autonomous)         (learns)
+```
+
+### Next Steps (After the Workshop)
+
+| Topic | What to explore |
+|-------|-----------------|
+| **Human-in-the-loop** | Add approval gates before destructive actions |
+| **Structured outputs** | Use Pydantic models for reliable agent responses |
+| **MCP integration** | Connect to real Prometheus/PagerDuty via MCP protocol |
+| **Observability** | Add OpenTelemetry tracing to monitor agent decisions |
+| **Evaluation** | Red-team test with adversarial incident scenarios |
+
+> **Still have time?** Head to **[Challenge 4: Advanced Patterns (Bonus)](../challenge-4/README.md)** for stretch goals!
+
+### Resources
+
+- [Microsoft Agent Framework Docs](https://learn.microsoft.com/en-us/agent-framework/)
+- [Agent Framework GitHub](https://github.com/microsoft/agent-framework)
+- [Azure AI Foundry](https://ai.azure.com)
+- This workshop: [github.com/ishasalania/maf-lab](https://github.com/ishasalania/maf-lab)
