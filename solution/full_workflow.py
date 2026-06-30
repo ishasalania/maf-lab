@@ -26,11 +26,11 @@ from agent_framework import (
     AgentExecutorRequest,
     AgentExecutorResponse,
     Case,
-    Content,
     Default,
     Message,
     WorkflowBuilder,
     WorkflowContext,
+    WorkflowRunState,
     executor,
 )
 from agent_framework.foundry import FoundryChatClient
@@ -121,7 +121,7 @@ def create_triage_agent() -> Agent:
             "Classify severity and recommend next steps."
         ),
         tools=[check_alert_history, get_runbook],
-        default_options=OpenAIChatOptions[Any](response_format=TriageResult),
+        default_options=OpenAIChatOptions(response_format=TriageResult),
     )
 
 
@@ -137,7 +137,7 @@ def create_diagnostics_agent() -> Agent:
             "Synthesize findings with confidence score."
         ),
         tools=[get_metrics, get_logs, check_dependencies],
-        default_options=OpenAIChatOptions[Any](response_format=DiagnosticsResult),
+        default_options=OpenAIChatOptions(response_format=DiagnosticsResult),
     )
 
 
@@ -187,10 +187,9 @@ async def parse_triage(response: AgentExecutorResponse, ctx: WorkflowContext[Rou
     await ctx.send_message(RoutingDecision(severity=triage.severity, service=ctx.get_state("service")))
 
 
-def get_severity_condition(expected: str):
-    def condition(message: Any) -> bool:
-        return isinstance(message, RoutingDecision) and message.severity == expected
-    return condition
+def needs_diagnostics(message: Any) -> bool:
+    """Returns True for critical/high severity — routes to diagnostics path."""
+    return isinstance(message, RoutingDecision) and message.severity in ("critical", "high")
 
 
 @executor(id="to_diagnostics")
@@ -247,8 +246,7 @@ def build_workflow():
         .add_edge(ingest_alert, triage_agent_executor)
         .add_edge(triage_agent_executor, parse_triage)
         .add_switch_case_edge_group(parse_triage, [
-            Case(condition=get_severity_condition("critical"), target=to_diagnostics),
-            Case(condition=get_severity_condition("high"), target=to_diagnostics),
+            Case(condition=needs_diagnostics, target=to_diagnostics),
             Default(target=monitor_only),
         ])
         .add_edge(to_diagnostics, diagnostics_agent_executor)
@@ -272,10 +270,9 @@ async def main():
         events = await workflow.run(json.dumps(incident))
         outputs = events.get_outputs()
 
-        if outputs:
-            print(outputs[0])
-        else:
-            print("No output produced")
+        for out in outputs:
+            if isinstance(out, str):
+                print(out)
 
 
 if __name__ == "__main__":

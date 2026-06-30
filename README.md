@@ -233,6 +233,14 @@ maf-lab/
 
 ---
 
+## 🌐 Web Version (MOAW)
+
+This workshop is also available as a web-rendered walkthrough:
+
+👉 **[https://aka.ms/moaw/workshop/gh:ishasalania/maf-lab/main/docs/](https://microsoft.github.io/moaw/workshop/gh:ishasalania/maf-lab/main/docs/)**
+
+---
+
 ## Quick Start (2 Minutes)
 
 ### Option A: Codespaces (Recommended — Zero Setup)
