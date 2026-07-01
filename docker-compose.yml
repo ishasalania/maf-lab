@@ -1,0 +1,11 @@
+services:
+  maf-incident-api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - FOUNDRY_PROJECT_ENDPOINT=${FOUNDRY_PROJECT_ENDPOINT}
+      - FOUNDRY_MODEL=${FOUNDRY_MODEL}
+    restart: unless-stopped

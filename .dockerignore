@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+.env
+.env.*
+.git
+.venv
+.venv-*
+venv
+*.ipynb
+challenge-*/
+solution/
+docs/
+test_*.py
+README.md
+.gitignore
+*.egg-info
+node_modules
