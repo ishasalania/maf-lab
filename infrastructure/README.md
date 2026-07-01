@@ -4,14 +4,52 @@ Deploys everything needed for the workshop in one `terraform apply`.
 
 ## What Gets Deployed
 
+### Tier 1: Notebooks Only (Core Workshop)
+
 | Resource | Type | Purpose |
 |----------|------|---------|
 | Resource Group | `azurerm_resource_group` | Container for all resources |
-| AI Foundry | `Microsoft.CognitiveServices/accounts` (AIServices) | Hosts models + projects |
-| Foundry Project | `Microsoft.CognitiveServices/accounts/projects` | Workshop project |
-| GPT-4.1 | `azurerm_cognitive_deployment` | Model used by all agents |
+| AI Foundry | `Microsoft.CognitiveServices/accounts` (AIServices, S0) | Hosts models + projects |
+| Foundry Project | `Microsoft.CognitiveServices/accounts/projects` | Workshop project endpoint |
+| GPT-4.1 | `azurerm_cognitive_deployment` (GlobalStandard, capacity 30) | Model used by all agents |
 | RBAC: OpenAI User | `azurerm_role_assignment` | Attendees can call the model |
 | RBAC: Contributor | `azurerm_role_assignment` | Attendees can manage agents |
+
+### Tier 2: Container Deployment (Bonus Challenge / Demo)
+
+| Resource | Type | Purpose |
+|----------|------|---------|
+| Container Registry | `Microsoft.ContainerRegistry/registries` (Basic) | Store Docker image |
+| Container Apps Environment | `Microsoft.App/managedEnvironments` | Serverless container hosting |
+| Container App | `Microsoft.App/containerApps` | Runs the FastAPI incident API |
+| Managed Identity | System-assigned on Container App | Passwordless auth to Foundry |
+| RBAC: AcrPull | On Container App identity → ACR | Pull images from registry |
+| RBAC: OpenAI User | On Container App identity → Foundry | App can call the model |
+
+## What Each Attendee Needs
+
+### In Azure (provisioned by coaches)
+- `Cognitive Services OpenAI User` role on the Foundry account
+- `Cognitive Services Contributor` role on the Foundry account
+
+### On Their Machine (pre-installed or via Codespaces)
+- Python 3.10+
+- Azure CLI (`az login` authenticated)
+- GitHub Copilot (VS Code extension)
+
+### In Their `.env` File (provided by coaches)
+```
+FOUNDRY_PROJECT_ENDPOINT=https://<foundry-name>.services.ai.azure.com/api/projects/<project-name>
+FOUNDRY_MODEL=gpt-4.1
+```
+
+### What's NOT Needed
+- ❌ Storage Account
+- ❌ Key Vault
+- ❌ Azure AI Search
+- ❌ API keys (all auth is passwordless via AzureCliCredential)
+- ❌ Container Registry (unless deploying the app)
+- ❌ GPU or expensive compute
 
 ## RBAC Policies
 

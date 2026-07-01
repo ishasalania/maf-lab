@@ -89,6 +89,39 @@ Each step is an **agent** or **workflow executor** in a typed graph. Routing is 
 
 # Challenge 0: Environment Setup
 
+## Azure Resources Required
+
+Your lab environment needs the following Azure resources pre-provisioned:
+
+| Resource | Type | SKU | Purpose |
+|----------|------|-----|---------|
+| Resource Group | `Microsoft.Resources/resourceGroups` | — | Container for all resources |
+| AI Foundry Account | `Microsoft.CognitiveServices/accounts` (kind: AIServices) | S0 | Hosts models + project management |
+| Foundry Project | `Microsoft.CognitiveServices/accounts/projects` | — | Provides your project endpoint |
+| GPT-4.1 Deployment | `Microsoft.CognitiveServices/deployments` | GlobalStandard, capacity 30 | The LLM all agents call |
+
+### RBAC Roles (per attendee)
+
+| Role | Scope | Why |
+|------|-------|-----|
+| `Cognitive Services OpenAI User` | AI Foundry account | Call the model (inference) |
+| `Cognitive Services Contributor` | AI Foundry account | Create and manage agents |
+
+### For Container Deployment (Bonus / Demo)
+
+| Resource | Type | Purpose |
+|----------|------|---------|
+| Container Registry | `Microsoft.ContainerRegistry/registries` (Basic) | Store the Docker image |
+| Container Apps Environment | `Microsoft.App/managedEnvironments` | Serverless hosting |
+| Container App | `Microsoft.App/containerApps` | Runs the FastAPI API |
+| Managed Identity | System-assigned on Container App | Passwordless auth to Foundry |
+
+<div class="info" data-title="For coaches / tech team">
+
+All infrastructure is codified in `infrastructure/` (Terraform). Run `terraform apply` to deploy everything including attendee RBAC. See `infrastructure/README.md` for details.
+
+</div>
+
 ## Goal
 
 Get three things working:
