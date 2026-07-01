@@ -209,9 +209,9 @@ All infrastructure is codified in `infrastructure/` (Terraform). Run `terraform 
 
 ### Option A: Codespaces (Recommended — Zero Setup)
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ishasalania/maf-lab?quickstart=1)
+[Open in GitHub Codespaces](https://codespaces.new/ishasalania/maf-lab?quickstart=1)
 
-Everything is pre-installed: Python 3.11, Azure CLI, all pip packages. Click the button, wait 60 seconds, done.
+Everything is pre-installed: Python 3.11, Azure CLI, all pip packages. Click the link, wait 60 seconds, done.
 
 ### Option B: Local Setup
 
