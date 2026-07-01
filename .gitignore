@@ -3,3 +3,12 @@
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
+
+# Terraform
+infrastructure/.terraform/
+infrastructure/terraform.tfstate
+infrastructure/terraform.tfstate.backup
+infrastructure/tfplan
+infrastructure/*.tfplan
+*.tfvars
+!*.tfvars.example

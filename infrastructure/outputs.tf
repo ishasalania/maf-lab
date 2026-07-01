@@ -29,3 +29,27 @@ output "ENV_FILE_CONTENT" {
     FOUNDRY_MODEL=gpt-4.1
   EOT
 }
+
+# ---------------------------------------------------------------------------
+# Container Deployment Outputs
+# ---------------------------------------------------------------------------
+
+output "ACR_LOGIN_SERVER" {
+  description = "Container Registry login server (for az acr build)"
+  value       = azurerm_container_registry.this.login_server
+}
+
+output "ACR_NAME" {
+  description = "Container Registry name"
+  value       = azurerm_container_registry.this.name
+}
+
+output "CONTAINER_APP_URL" {
+  description = "Public URL of the deployed API"
+  value       = "https://${azurerm_container_app.this.ingress[0].fqdn}"
+}
+
+output "DEPLOY_COMMAND" {
+  description = "Run this to build and deploy (no Docker needed)"
+  value       = "az acr build --registry ${azurerm_container_registry.this.name} --image maf-incident-api:latest ."
+}
