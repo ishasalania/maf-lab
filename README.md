@@ -207,17 +207,17 @@ Each challenge builds on the previous one. Challenges 1–3 are the core worksho
 maf-lab/
 ├── challenge-0/               # Setup & verification
 │   ├── README.md              # Step-by-step environment setup guide
-│   ├── verify-setup.ipynb     # Run this — all checks should show ✅
+│   ├── challenge-0.ipynb      # Run this — all checks should show ✅
 │   └── scripts/               # Optional: deploy Azure resources yourself
 ├── challenge-1/               # Structured agents with Pydantic outputs
 │   ├── README.md              # Concept guide: what are structured outputs?
-│   └── challenge.ipynb        # Build Triage, Diagnostics, Remediation, Verification agents
+│   └── challenge-1.ipynb      # Build Triage, Diagnostics, Remediation, Verification agents
 ├── challenge-2/               # Workflow graphs with conditional routing
 │   ├── README.md              # Concept guide: workflow graphs & switch-case
-│   └── challenge.ipynb        # Wire agents into WorkflowBuilder with routing
+│   └── challenge-2.ipynb      # Wire agents into WorkflowBuilder with routing
 ├── challenge-3/               # Human-in-the-loop & resilience
 │   ├── README.md              # Concept guide: approval, pause/resume, retry
-│   └── challenge.ipynb        # Add HITL gates, functional workflows, retry loops
+│   └── challenge-3.ipynb      # Add HITL gates, functional workflows, retry loops
 ├── challenge-4/               # Bonus: advanced composition patterns
 │   └── README.md              # 4 options: workflow-as-agent, sub-workflows, OTel, fan-out
 ├── tools/

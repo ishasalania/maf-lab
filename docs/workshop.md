@@ -255,8 +255,7 @@ No API keys. No secrets in `.env`. Just `az login` and your Azure account does t
 
 ## Step 4: Verify
 
-Open `challenge-0/verify-setup.ipynb` and run all cells. You should see:
-
+Open `challenge-0/challenge-0.ipynb` and run all cells. You should see:
 - ✅ Python version OK
 - ✅ Dependencies installed
 - ✅ Environment variables loaded
@@ -363,7 +362,7 @@ The `Annotated[str, "description"]` tells the LLM what each parameter means. The
 
 ## Your Task
 
-Open `challenge-1/challenge.ipynb` and build four agents:
+Open `challenge-1/challenge-1.ipynb` and build four agents:
 
 | Agent | Output Model | Tools | Purpose |
 |-------|-------------|-------|---------|
@@ -508,7 +507,7 @@ workflow = (
 
 ## Your Task
 
-Open `challenge-2/challenge.ipynb`:
+Open `challenge-2/challenge-2.ipynb`:
 
 1. Define a `RoutingDecision` dataclass for the switch-case
 2. Build condition functions: `needs_diagnostics()` (for CRITICAL + HIGH)
@@ -637,7 +636,7 @@ async def remediate_with_approval(plan: str, ctx: RunContext) -> str:
 
 ## Your Task
 
-Open `challenge-3/challenge.ipynb`:
+Open `challenge-3/challenge-3.ipynb`:
 
 1. Wire `ApprovalGate` → `ExecuteAction` and run with pause/resume
 2. Build a tool approval workflow with an agent + approval loop

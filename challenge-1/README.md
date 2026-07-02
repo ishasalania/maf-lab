@@ -121,7 +121,7 @@ print(result.field_a)  # Type-safe access, IDE autocomplete works
 Open the notebook:
 
 ```
-challenge-1/challenge.ipynb
+challenge-1/challenge-1.ipynb
 ```
 
 The notebook provides:

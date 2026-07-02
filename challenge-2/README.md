@@ -178,7 +178,7 @@ This is NOT an LLM decision — it's a **deterministic check** on a typed field.
 Open the notebook:
 
 ```
-challenge-2/challenge.ipynb
+challenge-2/challenge-2.ipynb
 ```
 
 The notebook provides:

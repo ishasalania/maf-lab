@@ -170,7 +170,7 @@ Your .env file:
 
 ## Step 5: Run the Verification Notebook
 
-Open `challenge-0/verify-setup.ipynb` and **run all cells** (Shift+Enter through each one).
+Open `challenge-0/challenge-0.ipynb` and **run all cells** (Shift+Enter through each one).
 
 You should see:
 
@@ -232,7 +232,7 @@ This is the **exact same pattern** you'll use throughout Challenges 1–3. If th
 
 - [ ] `az account show` displays your subscription
 - [ ] `.env` file exists with `FOUNDRY_PROJECT_ENDPOINT` and `FOUNDRY_MODEL`
-- [ ] All 5 cells in `verify-setup.ipynb` show ✅
+- [ ] All 5 cells in `challenge-0.ipynb` show ✅
 - [ ] The test agent returns `{'message': '...', 'ready': True}` (structured output works!)
 
 ---

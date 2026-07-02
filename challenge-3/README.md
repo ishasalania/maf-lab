@@ -192,7 +192,7 @@ async def verify_with_retry(ctx):
 Open the notebook:
 
 ```
-challenge-3/challenge.ipynb
+challenge-3/challenge-3.ipynb
 ```
 
 The notebook provides:
