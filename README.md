@@ -178,9 +178,12 @@ If you've written Python functions, used pip, and called REST APIs — you're re
            │  Human approves. Workflow resumes.
            │  Add retry logic for failures.
            ▼
-14:00 ─── Challenge 4: Advanced (Bonus) ─────────── 15 min
+14:00 ─── Challenge 4: Advanced (Bonus) ─────────── 10 min
            │  Workflow-as-agent. Sub-workflows.
            │  Parallelism. OpenTelemetry.
+           ▼
+14:10 ─── Deploy: Docker & Report ───────────────── 5 min
+           │  Build container. Hit API. Generate report.
            ▼
 14:15 ─── Wrap-up & Q&A
 ```
@@ -196,8 +199,9 @@ If you've written Python functions, used pip, and called REST APIs — you're re
 | [2](challenge-2/README.md) | **Workflow Graphs** | 30 min | Wire agents into a graph with switch-case routing | `WorkflowBuilder` + conditional edges |
 | [3](challenge-3/README.md) | **Human-in-the-Loop** | 25 min | Add approval gates, pause/resume, retry loops | Safe production deployment |
 | [4](challenge-4/README.md) | **Advanced Composition** | 20+ min | Workflow-as-agent, sub-workflows, parallelism | Composition at scale |
+| [Deploy](deploy/deploy.ipynb) | **Docker & Report** | 10 min | Build container, hit API, generate incident report | From notebook to production |
 
-Each challenge builds on the previous one. Challenges 1–3 are the core workshop. Challenge 4 is for teams that finish early.
+Each challenge builds on the previous one. Challenges 1–3 are the core workshop. Challenge 4 and Deploy are for teams that finish early.
 
 ---
 
@@ -219,7 +223,16 @@ maf-lab/
 │   ├── README.md              # Concept guide: approval, pause/resume, retry
 │   └── challenge-3.ipynb      # Add HITL gates, functional workflows, retry loops
 ├── challenge-4/               # Bonus: advanced composition patterns
-│   └── README.md              # 4 options: workflow-as-agent, sub-workflows, OTel, fan-out
+│   ├── README.md              # 4 options: workflow-as-agent, sub-workflows, OTel, fan-out
+│   └── challenge-4.ipynb      # Pick-your-adventure bonus exercises
+├── deploy/                    # Production deployment
+│   └── deploy.ipynb           # Docker build, hit API, generate incident report
+├── app/                       # Production FastAPI application
+│   ├── main.py                # REST API: /health, /incidents, /incidents/stream
+│   └── workflow.py            # Your workflow packaged for production
+├── infrastructure/            # Terraform for Azure Container Apps deployment
+├── Dockerfile                 # Container image (Python 3.12, non-root, health check)
+├── docker-compose.yml         # One-command local deployment
 ├── tools/
 │   └── mock_infra.py          # All @tool functions (metrics, logs, restart, scale, etc.)
 ├── data/
