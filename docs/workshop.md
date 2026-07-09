@@ -70,11 +70,50 @@ Same code, different outcomes — because the Triage Agent returns **structured 
 |---|---|
 | Laptop | With a browser (for Codespaces) or Python 3.10+ locally |
 | GitHub account | For Codespaces or cloning the repo |
-| GitHub Copilot | VS Code extension (helpful, not required) |
+| VS Code | With GitHub Copilot extension |
 | Azure CLI | Installed and authenticated (`az login`) |
 | Python basics | Functions, pip, async/await |
 
 Azure resources and credentials will be provided by your coaches.
+
+## Step 0: Join the Workshop GitHub Org & Get Copilot
+
+Before anything else, join the workshop organization to get GitHub Copilot access:
+
+1. **Scan the QR code** (or go to the join link) to join the `hackathon-gray-shrimp-46` GitHub org
+   - Join code: **`GFAEWUZC`**
+2. **Open VS Code** on your laptop
+3. **Install the GitHub Copilot extension** — search "GitHub Copilot" in the Extensions panel (`Ctrl+Shift+X`)
+4. **Sign in with your GitHub account** — click the person icon in the bottom-left → "Sign in to use GitHub Copilot"
+5. **Copilot activates automatically** — the extension detects your account has a Copilot Business seat from the org
+
+![Join org QR code](assets/join-org-qr.png)
+
+<div class="tip" data-title="Verify Copilot is active">
+
+Open any `.py` file, start typing `def hello` — you should see grey ghost text suggestions. If you see the Copilot icon (sparkle) in the bottom status bar, you're good.
+
+</div>
+
+## Step 1: Clone the Repo
+
+```bash
+git clone https://github.com/ishasalania/maf-lab.git
+cd maf-lab
+git checkout kiran/run-all-challenges
+```
+
+Then open it in VS Code:
+
+```bash
+code .
+```
+
+<div class="info" data-title="Alternative: Codespaces">
+
+If you prefer zero local setup, use Codespaces: [Open in Codespaces](https://codespaces.new/ishasalania/maf-lab?ref=kiran/run-all-challenges&quickstart=1)
+
+</div>
 
 ## Workshop Flow
 
