@@ -26,6 +26,7 @@ sections_title:
   - "Challenge 2: Workflow Graphs"
   - "Challenge 3: Human-in-the-Loop"
   - "Challenge 4: Advanced (Bonus)"
+  - "Deploy: Docker & Report"
   - Wrap-up & Resources
 ---
 
@@ -84,7 +85,8 @@ Azure resources and credentials will be provided by your coaches.
 | 13:00 | Challenge 2: Workflow Graphs | 30 min |
 | 13:30 | Break | 5 min |
 | 13:35 | Challenge 3: Human-in-the-Loop | 25 min |
-| 14:00 | Challenge 4: Advanced (Bonus) | 15 min |
+| 14:00 | Challenge 4: Advanced (Bonus) | 10 min |
+| 14:10 | Deploy: Docker & Report | 5 min |
 | 14:15 | Wrap-up & Q&A | — |
 
 ---
@@ -362,7 +364,15 @@ The `Annotated[str, "description"]` tells the LLM what each parameter means. The
 
 ## Your Task
 
-Open `challenge-1/challenge-1.ipynb` and build four agents:
+Open `challenge-1/challenge-1.ipynb` and build four agents.
+
+<div class="tip" data-title="How the challenges work">
+
+Each challenge notebook has **reference code** (provided) and **✍️ Your Turn** cells where you write code. The ✍️ cells contain detailed comments describing what to build — place your cursor after the comments and press **`Ctrl+I`** to let GitHub Copilot generate the code inline. Then run the cell and the validation cell below it to verify.
+
+You're learning MAF by seeing what Copilot produces from structured prompts — and validating that it actually works.
+
+</div>
 
 | Agent | Output Model | Tools | Purpose |
 |-------|-------------|-------|---------|
@@ -708,6 +718,34 @@ See `challenge-4/README.md` for detailed implementation guidance and code snippe
 
 ---
 
+# Deploy: From Notebook to Production API
+
+You've built and tested the multi-agent workflow in notebooks. Now ship it as a containerized REST API.
+
+Open `deploy/deploy.ipynb` and follow the steps:
+
+| Step | What You Do |
+|------|-------------|
+| 1. Explore the API | Read `app/main.py` — your workflow is now a FastAPI service with `/health` and `/incidents` endpoints |
+| 2. Docker build & run | `docker compose up --build` (or `uvicorn app.main:app --port 8000` without Docker) |
+| 3. Process incidents | POST all 3 incidents to the API and see structured responses |
+| 4. Generate report | ✍️ Use Copilot to generate a formatted incident response report — your deliverable |
+| 5. (Bonus) Azure deploy | Push to ACR → deploy to Container Apps using the Terraform in `infrastructure/` |
+
+<div class="info" data-title="Key difference">
+
+The production app uses `DefaultAzureCredential` instead of `AzureCliCredential` — this works both locally (falls back to CLI) and in the cloud (uses managed identity). Same workflow, same agents, different auth.
+
+</div>
+
+<div class="tip" data-title="No Docker?">
+
+You can run the API directly with `uvicorn app.main:app --port 8000`. Docker is optional.
+
+</div>
+
+---
+
 # Wrap-up & Resources
 
 ## What You Built
@@ -719,6 +757,7 @@ A production-grade multi-agent incident response system with:
 - ✅ **Switch-case routing** — conditional paths based on typed data, not LLM interpretation
 - ✅ **Human-in-the-loop** — tool approval, explicit pause/resume, functional workflows
 - ✅ **Shared state** — `ctx.set_state/get_state` passes context without tight coupling
+- ✅ **Production deployment** — Docker container serving a REST API with FastAPI
 
 ## Key Takeaway
 
