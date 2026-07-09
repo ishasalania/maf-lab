@@ -89,7 +89,7 @@ Before anything else, join the workshop organization to get GitHub Copilot acces
 
 ![Join org QR code](assets/GithubLink.png)
 
-<div class="tip" data-title="Verify Copilot is active">
+<div class="tip" data-title="Verify Copilot">
 
 Open any `.py` file, start typing `def hello` — you should see grey ghost text suggestions. If you see the Copilot icon (sparkle) in the bottom status bar, you're good.
 
@@ -109,7 +109,7 @@ Then open it in VS Code:
 code .
 ```
 
-<div class="info" data-title="Alternative: Codespaces">
+<div class="info" data-title="Codespaces">
 
 If you prefer zero local setup, use Codespaces: [Open in Codespaces](https://codespaces.new/ishasalania/maf-lab?ref=kiran/run-all-challenges&quickstart=1)
 
@@ -240,7 +240,7 @@ Your coaches have pre-provisioned these resources. You do NOT need to create the
 | RBAC: `Cognitive Services OpenAI User` | Your permission to call the model |
 | RBAC: `Cognitive Services Contributor` | Your permission to manage agents |
 
-<div class="info" data-title="For coaches / tech team">
+<div class="info" data-title="For coaches">
 
 All infrastructure is codified in `infrastructure/` (Terraform). Run `terraform apply -var='attendee_object_ids=["oid1","oid2"]'` to deploy everything including attendee RBAC. See `infrastructure/README.md`.
 
@@ -405,7 +405,7 @@ The `Annotated[str, "description"]` tells the LLM what each parameter means. The
 
 Open `challenge-1/challenge-1.ipynb` and build four agents.
 
-<div class="tip" data-title="How the challenges work">
+<div class="tip" data-title="How to complete">
 
 Each challenge notebook has **reference code** (provided) and **✍️ Your Turn** cells where you write code. The ✍️ cells contain detailed comments describing what to build — place your cursor after the comments and press **`Ctrl+I`** to let GitHub Copilot generate the code inline. Then run the cell and the validation cell below it to verify.
 
@@ -507,7 +507,7 @@ Every executor receives a `ctx` object. This is your interface to the workflow e
 | `await ctx.yield_output(result)` | **Async** | Emit a final result the caller can read |
 | `await ctx.request_info(data, type)` | **Async** | Pause the workflow and ask a human for input (Challenge 3) |
 
-<div class="warning" data-title="Common mistake">
+<div class="warning" data-title="Common error">
 
 `ctx.set_state()` and `ctx.get_state()` are **synchronous** — don't `await` them.
 `ctx.send_message()`, `ctx.yield_output()`, and `ctx.request_info()` are **async** — you MUST `await` them.
@@ -563,7 +563,7 @@ Open `challenge-2/challenge-2.ipynb`:
 3. Wire the full workflow: `ingest → triage → parse → switch → diagnostics/monitor → comms`
 4. Run all 3 incidents and verify routing
 
-<div class="warning" data-title="Critical Gotcha">
+<div class="warning" data-title="Gotcha">
 
 You **cannot** have two `Case` entries from the same source pointing to the same target. If both CRITICAL and HIGH go to diagnostics, combine them into a single `needs_diagnostics()` condition that checks `severity in ("critical", "high")`.
 
