@@ -91,7 +91,7 @@ Before anything else, join the workshop organization to get GitHub Copilot acces
 
 <div class="tip" data-title="Verify Copilot">
 
-Open any `.py` file, start typing `def hello` — you should see grey ghost text suggestions. If you see the Copilot icon (sparkle) in the bottom status bar, you're good.
+> Open any `.py` file, start typing `def hello` — you should see grey ghost text suggestions. If you see the Copilot icon (sparkle) in the bottom status bar, you're good.
 
 </div>
 
@@ -111,7 +111,7 @@ code .
 
 <div class="info" data-title="Codespaces">
 
-If you prefer zero local setup, use Codespaces: [Open in Codespaces](https://codespaces.new/ishasalania/maf-lab?ref=kiran/run-all-challenges&quickstart=1)
+> If you prefer zero local setup, use Codespaces: [Open in Codespaces](https://codespaces.new/ishasalania/maf-lab?ref=kiran/run-all-challenges&quickstart=1)
 
 </div>
 
@@ -220,7 +220,7 @@ Here's how the pieces stack up:
 
 <div class="info" data-title="For experts">
 
-MAF is the direct successor to both Semantic Kernel and AutoGen, created by the same teams. It combines AutoGen's simple agent abstractions with Semantic Kernel's enterprise features — session-based state, type safety, middleware, telemetry — and adds graph-based workflows. [Learn more about the lineage](https://learn.microsoft.com/agent-framework/overview/agent-framework-overview).
+> MAF is the direct successor to both Semantic Kernel and AutoGen, created by the same teams. It combines AutoGen's simple agent abstractions with Semantic Kernel's enterprise features — session-based state, type safety, middleware, telemetry — and adds graph-based workflows. [Learn more about the lineage](https://learn.microsoft.com/agent-framework/overview/agent-framework-overview).
 
 </div>
 
@@ -242,7 +242,7 @@ Your coaches have pre-provisioned these resources. You do NOT need to create the
 
 <div class="info" data-title="For coaches">
 
-All infrastructure is codified in `infrastructure/` (Terraform). Run `terraform apply -var='attendee_object_ids=["oid1","oid2"]'` to deploy everything including attendee RBAC. See `infrastructure/README.md`.
+> All infrastructure is codified in `infrastructure/` (Terraform). Run `terraform apply -var='attendee_object_ids=["oid1","oid2"]'` to deploy everything including attendee RBAC. See `infrastructure/README.md`.
 
 </div>
 
@@ -305,7 +305,7 @@ Open `challenge-0/challenge-0.ipynb` and run all cells. You should see:
 
 <div class="warning" data-title="Stuck?">
 
-Don't spend more than 5 minutes on setup. Raise your hand — that's what coaches are for!
+> Don't spend more than 5 minutes on setup. Raise your hand — that's what coaches are for!
 
 </div>
 
@@ -378,7 +378,7 @@ This is NOT prompt engineering — it's a **hard constraint** at model inference
 
 <div class="info" data-title="Deep dive">
 
-The `response_format` parameter uses OpenAI's [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs) feature. MAF handles the schema conversion automatically — you just write a Pydantic model.
+> The `response_format` parameter uses OpenAI's [Structured Outputs](https://platform.openai.com/docs/guides/structured-outputs) feature. MAF handles the schema conversion automatically — you just write a Pydantic model.
 
 </div>
 
@@ -407,9 +407,9 @@ Open `challenge-1/challenge-1.ipynb` and build four agents.
 
 <div class="tip" data-title="How to complete">
 
-Each challenge notebook has **reference code** (provided) and **✍️ Your Turn** cells where you write code. The ✍️ cells contain detailed comments describing what to build — place your cursor after the comments and press **`Ctrl+I`** to let GitHub Copilot generate the code inline. Then run the cell and the validation cell below it to verify.
+> Each challenge notebook has **reference code** (provided) and **✍️ Your Turn** cells where you write code. The ✍️ cells contain detailed comments describing what to build — place your cursor after the comments and press **`Ctrl+I`** to let GitHub Copilot generate the code inline. Then run the cell and the validation cell below it to verify.
 
-You're learning MAF by seeing what Copilot produces from structured prompts — and validating that it actually works.
+> You're learning MAF by seeing what Copilot produces from structured prompts — and validating that it actually works.
 
 </div>
 
@@ -429,7 +429,7 @@ You're learning MAF by seeing what Copilot produces from structured prompts — 
 
 <div class="tip" data-title="Success Criteria">
 
-Each agent returns a validated Pydantic object — no regex, no parsing, just typed data you can use programmatically.
+> Each agent returns a validated Pydantic object — no regex, no parsing, just typed data you can use programmatically.
 
 </div>
 
@@ -509,8 +509,8 @@ Every executor receives a `ctx` object. This is your interface to the workflow e
 
 <div class="warning" data-title="Common error">
 
-`ctx.set_state()` and `ctx.get_state()` are **synchronous** — don't `await` them.
-`ctx.send_message()`, `ctx.yield_output()`, and `ctx.request_info()` are **async** — you MUST `await` them.
+> `ctx.set_state()` and `ctx.get_state()` are **synchronous** — don't `await` them.
+> `ctx.send_message()`, `ctx.yield_output()`, and `ctx.request_info()` are **async** — you MUST `await` them.
 
 </div>
 
@@ -565,15 +565,15 @@ Open `challenge-2/challenge-2.ipynb`:
 
 <div class="warning" data-title="Gotcha">
 
-You **cannot** have two `Case` entries from the same source pointing to the same target. If both CRITICAL and HIGH go to diagnostics, combine them into a single `needs_diagnostics()` condition that checks `severity in ("critical", "high")`.
+> You **cannot** have two `Case` entries from the same source pointing to the same target. If both CRITICAL and HIGH go to diagnostics, combine them into a single `needs_diagnostics()` condition that checks `severity in ("critical", "high")`.
 
 </div>
 
 <div class="tip" data-title="Success Criteria">
 
-- CRITICAL → diagnostics → comms
-- HIGH → diagnostics → comms
-- LOW → monitor_only
+> - CRITICAL → diagnostics → comms
+> - HIGH → diagnostics → comms
+> - LOW → monitor_only
 
 </div>
 
@@ -693,15 +693,15 @@ Open `challenge-3/challenge-3.ipynb`:
 
 <div class="tip" data-title="Key Insight">
 
-`@response_handler` signature MUST have 4 params: `(self, original_request, response, ctx)`. Missing a param is the #1 error in this challenge.
+> `@response_handler` signature MUST have 4 params: `(self, original_request, response, ctx)`. Missing a param is the #1 error in this challenge.
 
 </div>
 
 <div class="tip" data-title="Success Criteria">
 
-- Workflow pauses with `IDLE_WITH_PENDING_REQUESTS`
-- Human response resumes the workflow
-- Tool approval loop handles all tool calls
+> - Workflow pauses with `IDLE_WITH_PENDING_REQUESTS`
+> - Human response resumes the workflow
+> - Tool approval loop handles all tool calls
 
 </div>
 
@@ -751,7 +751,7 @@ When an incident affects multiple services, investigate them concurrently. Use M
 
 <div class="info" data-title="Reference">
 
-See `challenge-4/README.md` for detailed implementation guidance and code snippets for each option.
+> See `challenge-4/README.md` for detailed implementation guidance and code snippets for each option.
 
 </div>
 
@@ -773,13 +773,13 @@ Open `deploy/deploy.ipynb` and follow the steps:
 
 <div class="info" data-title="Key difference">
 
-The production app uses `DefaultAzureCredential` instead of `AzureCliCredential` — this works both locally (falls back to CLI) and in the cloud (uses managed identity). Same workflow, same agents, different auth.
+> The production app uses `DefaultAzureCredential` instead of `AzureCliCredential` — this works both locally (falls back to CLI) and in the cloud (uses managed identity). Same workflow, same agents, different auth.
 
 </div>
 
 <div class="tip" data-title="No Docker?">
 
-You can run the API directly with `uvicorn app.main:app --port 8000`. Docker is optional.
+> You can run the API directly with `uvicorn app.main:app --port 8000`. Docker is optional.
 
 </div>
 
