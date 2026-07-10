@@ -32,22 +32,7 @@ Over 2 hours, you'll build a **multi-agent incident response system** that autom
 
 A single agent (like Copilot) handles one task at a time. Multi-agent systems split complex problems across **specialized agents** that each do one thing well:
 
-```
-Single Agent (Copilot):          Multi-Agent (MAF):
-┌──────────────┐                 ┌────────┐    ┌──────────┐    ┌─────────┐
-│  One LLM     │                 │ Triage │───→│ Diagnose │───→│ Approve │
-│  does        │                 │ Agent  │    │ Agent    │    │ (Human) │
-│  everything  │                 └────────┘    └──────────┘    └────┬────┘
-└──────────────┘                                                    │
-                                                              ┌─────▼─────┐
-                                                              │  Execute  │
-                                                              │  Agent    │
-                                                              └─────┬─────┘
-                                                              ┌─────▼─────┐
-                                                              │  Verify   │
-                                                              │  Agent    │
-                                                              └───────────┘
-```
+![Multi-Agent Incident Response System Architecture](./images/architecture.png)
 
 **Why?** Because in production:
 - You need **typed contracts** between agents (not free text parsing)
