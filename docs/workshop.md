@@ -108,23 +108,89 @@ Before anything else, join the workshop organization to get GitHub Copilot acces
 
 </div>
 
-## Step 1: Clone the Repo
+## Step 1: Get the Code
+
+### Option A: GitHub Codespaces (Recommended — zero install)
+
+1. Click: **[Open in Codespaces](https://codespaces.new/ishasalania/maf-lab?ref=kiran/run-all-challenges&quickstart=1)**
+2. Wait ~60 seconds — Python, dependencies, Copilot extension all pre-installed
+3. Skip to Step 2
+
+### Option B: Local Setup
 
 ```bash
 git clone https://github.com/ishasalania/maf-lab.git
 cd maf-lab
 git checkout kiran/run-all-challenges
-```
-
-Then open it in VS Code:
-
-```bash
+python -m venv .venv && .venv\Scripts\activate   # Windows
+# source .venv/bin/activate                      # macOS/Linux
+pip install -r requirements.txt
 code .
 ```
 
-<div class="info" data-title="Codespaces">
+---
 
-> If you prefer zero local setup, use Codespaces: [Open in Codespaces](https://codespaces.new/ishasalania/maf-lab?ref=kiran/run-all-challenges&quickstart=1)
+## Step 2: Configure Environment
+
+### If using Codespaces (one command):
+
+Open the terminal in your Codespace and run:
+
+```bash
+echo -e "GITHUB_TOKEN=$(gh auth token)\nMODEL_NAME=gpt-4o" > .env
+```
+
+Done — uses your existing GitHub session. No extra token generation needed.
+
+<div class="tip" data-title="Verify">
+
+> Run `cat .env` — you should see your token and model name.
+
+</div>
+
+### If running locally (manual steps):
+
+1. Copy the example:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Generate a GitHub token — pick one method:
+
+   **Via browser:**
+   - Go to [github.com/settings/tokens](https://github.com/settings/tokens) → **Generate new token (classic)**
+   - Check **`models:read`** permission → Copy the token
+
+   **Via CLI:**
+   ```bash
+   gh auth login
+   gh auth token
+   ```
+
+3. Fill in `.env`:
+   ```text
+   GITHUB_TOKEN=ghp_your_token_here
+   MODEL_NAME=gpt-4o
+   ```
+
+### Alternative: Azure AI Foundry
+
+If you have Azure Frontier Labs credentials instead:
+
+```text
+FOUNDRY_PROJECT_ENDPOINT=https://<your-foundry>.services.ai.azure.com/api/projects/<project-name>
+FOUNDRY_MODEL=gpt-4.1
+```
+
+Then: `az login` with your Frontier Labs email and passcode.
+
+<div class="tip" data-title="Auto-detect">
+
+> The notebooks detect which backend to use automatically:
+> - `GITHUB_TOKEN` set → GitHub Models
+> - `FOUNDRY_PROJECT_ENDPOINT` set → Azure AI Foundry
+>
+> All agents, tools, workflows work identically on both.
 
 </div>
 
@@ -263,97 +329,14 @@ If you have not claimed your environment yet, go back to the **Prerequisites** s
 
 ## Step 1: Get the Code
 
-### Option A: Codespaces (Recommended — Zero Setup)
+Follow the instructions from **Step 1** and **Step 2** in the Introduction section above.
 
-[Open in GitHub Codespaces](https://codespaces.new/ishasalania/maf-lab?quickstart=1)
-
-Everything is pre-installed: Python 3.11, Azure CLI, all pip packages. Click the link, wait 60 seconds, done.
-
-### Option B: Local Setup
-
-```bash
-git clone https://github.com/ishasalania/maf-lab.git
-cd maf-lab
-python -m venv .venv && source .venv/bin/activate  # macOS/Linux
-# .venv\Scripts\activate                            # Windows
-pip install -r requirements.txt
-```
-
-## Step 2: Configure Environment
-
-Create your `.env` file:
-
-```bash
-cp .env.example .env
-```
-
-### Option A: GitHub Models (Recommended for this workshop)
-
-Since you joined the `hackathon-gray-shrimp-46` org, you already have access to GitHub Models. Generate a token:
-
-1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) → **Generate new token (classic)**
-2. Check the **`models:read`** permission
-3. Copy the token
-
-Fill in your `.env`:
-
-```text
-GITHUB_TOKEN=ghp_your_token_here
-MODEL_NAME=gpt-4o
-```
-
-That's it — no Azure login needed. The notebooks auto-detect `GITHUB_TOKEN` and connect to GitHub Models.
-
-### Option B: Azure AI Foundry (Alternative)
-
-If you have Azure Frontier Labs credentials, use the values from the Foundry Portal instead:
-
-```text
-FOUNDRY_PROJECT_ENDPOINT=https://<your-foundry>.services.ai.azure.com/api/projects/<project-name>
-FOUNDRY_MODEL=gpt-4.1
-```
-
-Then authenticate with `az login` using your Frontier Labs email and passcode.
-
-<div class="tip" data-title="How it works">
-
-> The notebooks auto-detect which backend to use:
-> - If `GITHUB_TOKEN` is set → connects to GitHub Models (no Azure needed)
-> - If `FOUNDRY_PROJECT_ENDPOINT` is set → connects to Azure AI Foundry
-> 
-> All agents, tools, and workflows work identically on both backends.
-
-</div>
-
-## Step 3: Authenticate
-
-Log in using the credentials from Azure Frontier Labs:
-
-```bash
-az login
-```
-
-When prompted, use the **temporary email and passcode** you received from Frontier Labs. Then set your subscription:
-
-```bash
-az account set --subscription "<your-subscription-id>"
-```
-
-### How Authentication Works
-
-```text
-Your Code → AzureCliCredential → az login session → Azure AD → Token → Foundry API
-```
-
-No API keys. No secrets in `.env`. Just `az login` and your Azure account does the rest. This is **passwordless authentication** — the recommended pattern for development.
-
-## Step 4: Verify
+## Step 3: Verify
 
 Open `challenge-0/challenge-0.ipynb` and run all cells. You should see:
 - ✅ Python version OK
 - ✅ Dependencies installed
 - ✅ Environment variables loaded
-- ✅ Azure CLI authenticated
 - ✅ Agent returns structured output
 
 <div class="warning" data-title="Stuck?">
