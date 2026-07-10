@@ -262,7 +262,7 @@ This workshop is also available as a web-rendered walkthrough:
 
 ### Option A: Codespaces (Recommended — Zero Setup)
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ishasalania/maf-lab?quickstart=1)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/ishasalania/maf-lab?ref=kiran/run-all-challenges&quickstart=1)
 
 Everything is pre-installed. Just add your `.env` credentials and go.
 
@@ -271,10 +271,26 @@ Everything is pre-installed. Just add your `.env` credentials and go.
 ```bash
 git clone https://github.com/ishasalania/maf-lab.git
 cd maf-lab
+git checkout kiran/run-all-challenges
 python -m venv .venv && .venv\Scripts\activate  # Windows
 # source .venv/bin/activate                     # macOS/Linux
 pip install -r requirements.txt
 cp .env.example .env                            # Fill in your values
+```
+
+### Configure `.env`
+
+**GitHub Models (recommended for workshop):**
+```text
+GITHUB_TOKEN=ghp_your_token_here
+MODEL_NAME=gpt-4o
+```
+Generate token at [github.com/settings/tokens](https://github.com/settings/tokens) with `models:read` permission.
+
+**Azure AI Foundry (alternative):**
+```text
+FOUNDRY_PROJECT_ENDPOINT=https://your-foundry.services.ai.azure.com/api/projects/your-project
+FOUNDRY_MODEL=gpt-4.1
 ```
 
 Then follow [Challenge 0](challenge-0/README.md) to verify everything works.
@@ -289,10 +305,17 @@ Use this as a quick reference during the workshop:
 
 ```python
 from agent_framework import Agent
-from agent_framework.foundry import FoundryChatClient
-from agent_framework.openai import OpenAIChatOptions
+from agent_framework.openai import OpenAIChatClient, OpenAIChatOptions
 
-# Create a client (connects to Azure AI Foundry)
+# GitHub Models
+client = OpenAIChatClient(
+    model="gpt-4o",
+    api_key=os.environ["GITHUB_TOKEN"],
+    base_url="https://models.inference.ai.azure.com",
+)
+
+# OR Azure AI Foundry
+from agent_framework.foundry import FoundryChatClient
 client = FoundryChatClient(
     project_endpoint=os.environ["FOUNDRY_PROJECT_ENDPOINT"],
     model=os.environ["FOUNDRY_MODEL"],

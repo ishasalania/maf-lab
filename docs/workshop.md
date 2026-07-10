@@ -281,24 +281,47 @@ pip install -r requirements.txt
 
 ## Step 2: Configure Environment
 
-Use the values you copied from the Azure Foundry Portal (see Prerequisites). Create your `.env` file:
+Create your `.env` file:
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in the values you retrieved from Azure AI Foundry:
+### Option A: GitHub Models (Recommended for this workshop)
+
+Since you joined the `hackathon-gray-shrimp-46` org, you already have access to GitHub Models. Generate a token:
+
+1. Go to [github.com/settings/tokens](https://github.com/settings/tokens) → **Generate new token (classic)**
+2. Check the **`models:read`** permission
+3. Copy the token
+
+Fill in your `.env`:
+
+```text
+GITHUB_TOKEN=ghp_your_token_here
+MODEL_NAME=gpt-4o
+```
+
+That's it — no Azure login needed. The notebooks auto-detect `GITHUB_TOKEN` and connect to GitHub Models.
+
+### Option B: Azure AI Foundry (Alternative)
+
+If you have Azure Frontier Labs credentials, use the values from the Foundry Portal instead:
 
 ```text
 FOUNDRY_PROJECT_ENDPOINT=https://<your-foundry>.services.ai.azure.com/api/projects/<project-name>
 FOUNDRY_MODEL=gpt-4.1
 ```
 
-<div class="tip" data-title="Where to find these values">
+Then authenticate with `az login` using your Frontier Labs email and passcode.
 
-> 1. **Project Endpoint**: Azure AI Foundry Portal > Your Project > Overview > copy the endpoint URL
-> 2. **Model name**: Azure AI Foundry Portal > Deployments > copy the deployment name (e.g. `gpt-4.1`)
-> 3. Use **Windows + V** clipboard history to paste them easily
+<div class="tip" data-title="How it works">
+
+> The notebooks auto-detect which backend to use:
+> - If `GITHUB_TOKEN` is set → connects to GitHub Models (no Azure needed)
+> - If `FOUNDRY_PROJECT_ENDPOINT` is set → connects to Azure AI Foundry
+> 
+> All agents, tools, and workflows work identically on both backends.
 
 </div>
 
