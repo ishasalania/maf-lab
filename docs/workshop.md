@@ -87,7 +87,7 @@ Before anything else, join the workshop organization to get GitHub Copilot acces
 4. **Sign in with your GitHub account** — click the person icon in the bottom-left → "Sign in to use GitHub Copilot"
 5. **Copilot activates automatically** — the extension detects your account has a Copilot Business seat from the org
 
-![Join org QR code](assets/GithubLink.png)
+![Join org QR code](assets/join_qr.png)
 
 <div class="tip" data-title="Verify Copilot">
 
