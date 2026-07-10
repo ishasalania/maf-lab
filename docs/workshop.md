@@ -71,10 +71,27 @@ Same code, different outcomes — because the Triage Agent returns **structured 
 | Laptop | With a browser (for Codespaces) or Python 3.10+ locally |
 | GitHub account | For Codespaces or cloning the repo |
 | VS Code | With GitHub Copilot extension |
+| Azure subscription | Pre-provisioned via Azure Frontier Labs (see below) |
 | Azure CLI | Installed and authenticated (`az login`) |
 | Python basics | Functions, pip, async/await |
 
-Azure resources and credentials will be provided by your coaches.
+### Claim Your Azure Environment
+
+We have already deployed all required Azure resources for you. Follow these steps to get your credentials:
+
+1. Go to **[Azure Frontier Labs](https://azurefrontierlabs.github.io/posts/claim-environment/index.html)** and claim your environment
+2. You will receive a **temporary email** and **passcode** — save both
+3. Log in to the **[Azure Portal](https://portal.azure.com)** using those credentials
+4. Navigate to **Azure AI Foundry** in the portal
+5. Open the **Foundry Portal** and copy your **Project Endpoint** (looks like `https://xxx.services.ai.azure.com/api/projects/...`)
+6. Go to **Deployments** and note the **model name** that is already deployed (e.g. `gpt-4.1`)
+7. Keep both values handy — you will need them in Step 2 below
+
+<div class="tip" data-title="Pro tip: Windows clipboard">
+
+> Press **Windows + V** to enable clipboard history. This lets you copy multiple values (endpoint, model name, subscription ID) and then paste them one by one using Windows + V instead of switching back and forth.
+
+</div>
 
 ## Step 0: Join the Workshop GitHub Org & Get Copilot
 
@@ -228,9 +245,9 @@ Here's how the pieces stack up:
 
 # Challenge 0: Environment Setup
 
-## Azure Resources (Provided)
+## Azure Resources (Pre-provisioned)
 
-Your coaches have pre-provisioned these resources. You do NOT need to create them yourself.
+Your Azure environment has been pre-provisioned via **[Azure Frontier Labs](https://azurefrontierlabs.github.io/posts/claim-environment/index.html)**. The following resources are already deployed in your subscription:
 
 | Resource | Purpose |
 |----------|---------|
@@ -239,6 +256,8 @@ Your coaches have pre-provisioned these resources. You do NOT need to create the
 | GPT-4.1 Deployment (GlobalStandard) | The LLM all agents call |
 | RBAC: `Cognitive Services OpenAI User` | Your permission to call the model |
 | RBAC: `Cognitive Services Contributor` | Your permission to manage agents |
+
+If you have not claimed your environment yet, go back to the **Prerequisites** section and follow the steps.
 
 <div class="info" data-title="For coaches">
 
@@ -266,23 +285,38 @@ pip install -r requirements.txt
 
 ## Step 2: Configure Environment
 
-Your coach will provide the Foundry endpoint. Create your `.env` file:
+Use the values you copied from the Azure Foundry Portal (see Prerequisites). Create your `.env` file:
 
 ```bash
 cp .env.example .env
 ```
 
-Fill in the values:
+Fill in the values you retrieved from Azure AI Foundry:
 
 ```text
 FOUNDRY_PROJECT_ENDPOINT=https://<your-foundry>.services.ai.azure.com/api/projects/<project-name>
 FOUNDRY_MODEL=gpt-4.1
 ```
 
+<div class="tip" data-title="Where to find these values">
+
+> 1. **Project Endpoint**: Azure AI Foundry Portal > Your Project > Overview > copy the endpoint URL
+> 2. **Model name**: Azure AI Foundry Portal > Deployments > copy the deployment name (e.g. `gpt-4.1`)
+> 3. Use **Windows + V** clipboard history to paste them easily
+
+</div>
+
 ## Step 3: Authenticate
+
+Log in using the credentials from Azure Frontier Labs:
 
 ```bash
 az login
+```
+
+When prompted, use the **temporary email and passcode** you received from Frontier Labs. Then set your subscription:
+
+```bash
 az account set --subscription "<your-subscription-id>"
 ```
 
