@@ -57,6 +57,10 @@ Single Agent (Copilot):          Multi-Agent (MAF):
 
 This workshop teaches all four.
 
+## Architecture
+
+![Multi-Agent Incident Response System Architecture](docs/assets/architecture.png)
+
 ---
 
 ## What You'll Build: The Scenario

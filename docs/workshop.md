@@ -44,13 +44,9 @@ A single chatbot can't handle this. You need a system where **specialized agents
 
 That's what you'll build in this workshop.
 
-```text
-                         ┌─ [CRITICAL] ─→ Diagnostics ─→ Remediation (HITL) ─→ Verify ─→ Comms
-                         │
-  Alert ─→ Triage ─→ Switch ─ [HIGH] ────→ Diagnostics ─→ Remediation ─→ Comms
-                         │
-                         └─ [LOW] ─────→ Monitor Only
-```
+## System Architecture
+
+![Multi-Agent Incident Response System Architecture](assets/architecture.png)
 
 ## The Three Test Incidents
 
